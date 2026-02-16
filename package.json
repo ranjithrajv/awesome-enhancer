@@ -1,0 +1,80 @@
+{
+  "name": "awesome-enhance",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CLI tool to automatically enhance awesome lists with metadata and improved descriptions",
+  "main": "dist/src/index.js",
+  "bin": {
+    "awesome-enhance": "dist/bin/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "dev": "bun run bin/cli.ts",
+    "build": "bun run clean && rolldown -c rolldown.config.ts && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "bun run bin/cli.ts enhance test/sample-awesome.md --dry-run",
+    "lint": "oxlint --ignore-path dist && eslint .",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "prepublishOnly": "bun run build"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "awesome",
+    "awesome-list",
+    "cli",
+    "markdown",
+    "metadata",
+    "github"
+  ],
+  "author": "",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "awesome-lint": "^0.18.6",
+    "axios": "^1.13.3",
+    "cheerio": "^1.2.0",
+    "commander": "^12.0.0",
+    "dotenv": "^17.2.3",
+    "remark": "^15.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.0",
+    "unist-util-visit": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "knip": "^5.82.1",
+    "lint-staged": "^16.2.7",
+    "oxlint": "^1.41.0",
+    "prettier": "^3.8.1",
+    "rolldown": "^1.0.0-rc.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
