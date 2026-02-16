@@ -1,0 +1,31 @@
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Cache
+.cache/
+.awesome-cache/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test output
+test/output/
+enhanced-*.md
