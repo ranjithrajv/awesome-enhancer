@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-24
+
+### Added
+
+- **GitHub Actions CI**: Added Bun workflow for automated testing, linting, and building.
+- **Security Scanning**: Added CodeQL analysis workflow for vulnerability detection.
+- **PR Automation**: Added labeler workflow to auto-label pull requests based on changed files.
+- **.gitignore**: Added comprehensive `.gitignore` file with standard Node.js patterns.
+
+### Changed
+
+- Removed ESLint and TypeScript ESLint dependencies for simplified tooling.
+
+### Fixed
+
+- Updated package versions for improved compatibility.
+
 ## [0.1.0] - 2026-01-26
 
 ### Added
