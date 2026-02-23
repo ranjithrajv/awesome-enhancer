@@ -1,0 +1,42 @@
+# Configuration for labeling pull requests
+
+# Label PRs based on changed files
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/workflows/**'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.md'
+          - 'docs/**'
+          - 'LICENSE'
+
+src:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/**'
+          - 'lib/**'
+          - 'app/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'test/**'
+          - 'tests/**'
+          - '__tests__/**'
+          - '*.test.ts'
+          - '*.spec.ts'
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'tsconfig.json'
+          - 'bun.lock'
+          - '.eslintrc*'
+          - '.prettierrc*'
+
+workflow:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
