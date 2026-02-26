@@ -1,19 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { mkdtemp, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-// Mock axios before importing the module
+const mockedAxios = {
+  get: vi.fn(),
+} as unknown as { get: Mock };
+
 vi.mock('axios', () => ({
-  default: {
-    get: vi.fn(),
-  },
+  default: mockedAxios,
 }));
 
-import axios from 'axios';
 import { ScraperService } from '../../src/services/scraper.js';
-
-const mockedAxios = vi.mocked(axios);
 
 describe('ScraperService', () => {
   let tempDir: string;
