@@ -57,7 +57,7 @@
     "metadata",
     "github"
   ],
-  "author": "Ranjith Raj <ranjithrajv@example.com>",
+  "author": "Ranjith Raj <ranjithraj@riseup.net>",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
