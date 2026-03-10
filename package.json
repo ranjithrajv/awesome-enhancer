@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "description": "CLI tool to automatically enhance awesome lists with metadata and improved descriptions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ranjithrajv/awesome-enhancer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ranjithrajv/awesome-enhancer/issues?q=state%3Aopen+label%3Abug"
+  },
+  "homepage": "https://github.com/ranjithrajv/awesome-enhancer#readme",
   "main": "dist/src/index.js",
   "bin": {
     "awesome-enhance": "dist/bin/cli.js",
@@ -49,7 +57,7 @@
     "metadata",
     "github"
   ],
-  "author": "",
+  "author": "Ranjith Raj <ranjithrajv@example.com>",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
