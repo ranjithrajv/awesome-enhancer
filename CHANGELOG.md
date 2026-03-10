@@ -5,10 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-02-24
+## [0.2.0] - 2026-03-11
 
 ### Added
 
+- **Interactive TUI**: Added Ink-based interactive CLI with guided prompts for option selection.
+- **MCP Server**: Added Model Context Protocol server for AI agent integration (`awesome-enhance-mcp`).
+- **HTTP API Server**: Added HTTP REST API server on port 9867 (`awesome-enhance-server`).
+- **Skill File**: Added `skill/awesome-enhance/SKILL.md` for Claude agent documentation.
+- **AI-Agent Friendly**: Tool now accessible via MCP, HTTP API, and JSON output.
+- **Test Coverage**: Added 80% minimum test coverage threshold in pre-commit hooks.
 - **GitHub Actions CI**: Added Bun workflow for automated testing, linting, and building.
 - **Security Scanning**: Added CodeQL analysis workflow for vulnerability detection.
 - **PR Automation**: Added labeler workflow to auto-label pull requests based on changed files.
@@ -17,10 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Removed ESLint and TypeScript ESLint dependencies for simplified tooling.
+- Renamed `test/` directory to `tests/` for consistency.
 
 ### Fixed
 
 - Updated package versions for improved compatibility.
+- Fixed failing scraper tests (axios mock).
+- Added missing GitHub service tests.
+
+### Features
+
+- `enhance_local_file` - MCP tool for enhancing local markdown files
+- `enhance_github_url` - MCP tool for enhancing GitHub URLs
+- `enhance_with_json_output` - MCP tool returning JSON for AI agents
+- HTTP endpoints: `POST /enhance`, `POST /enhance/local`, `POST /enhance/github`, `GET /health`
 
 ## [0.1.0] - 2026-01-26
 

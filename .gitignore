@@ -2,6 +2,9 @@
 node_modules/
 bun.lock
 
+# Cache directories
+.awesome-cache/
+
 # Build outputs
 dist/
 build/
@@ -69,3 +72,7 @@ temp/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Test output files
+tests/output*.md
+enhanced-readme.md

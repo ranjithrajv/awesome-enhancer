@@ -12,7 +12,10 @@
     "declaration": true,
     "resolveJsonModule": true,
     "allowJs": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment"
   },
   "include": ["src/**/*.ts", "bin/**/*.ts", "test/**/*.ts", "index.ts"],
   "exclude": ["node_modules", "dist"]

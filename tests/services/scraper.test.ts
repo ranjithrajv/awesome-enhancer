@@ -1,17 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-const mockedAxios = {
-  get: vi.fn(),
-} as unknown as { get: Mock };
-
 vi.mock('axios', () => ({
-  default: mockedAxios,
+  default: {
+    get: vi.fn(),
+  },
 }));
 
 import { ScraperService } from '../../src/services/scraper.js';
+import axios from 'axios';
 
 describe('ScraperService', () => {
   let tempDir: string;
@@ -33,7 +32,7 @@ describe('ScraperService', () => {
   describe('fetchGitHubDescription', () => {
     it('strips GitHub prefix from descriptions', async () => {
       const html = `<html><head><meta property="og:description" content="GitHub - user/repo: A great tool for testing"></head></html>`;
-      mockedAxios.get.mockResolvedValueOnce({ data: html, headers: {} });
+      (axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: html, headers: {} });
 
       const scraper = new ScraperService(3600);
       const result = await scraper.fetchGitHubDescription('user', 'repo');
@@ -44,7 +43,7 @@ describe('ScraperService', () => {
     it('truncates descriptions over 200 characters', async () => {
       const longDesc = 'A'.repeat(250);
       const html = `<html><head><meta property="og:description" content="${longDesc}"></head></html>`;
-      mockedAxios.get.mockResolvedValueOnce({ data: html, headers: {} });
+      (axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: html, headers: {} });
 
       const scraper = new ScraperService(3600);
       const result = await scraper.fetchGitHubDescription('user', 'repo');
@@ -54,7 +53,7 @@ describe('ScraperService', () => {
     });
 
     it('returns null when fetch fails', async () => {
-      mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
+      (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
       const scraper = new ScraperService(3600);
       const result = await scraper.fetchGitHubDescription('user', 'repo');
@@ -66,7 +65,7 @@ describe('ScraperService', () => {
   describe('fetchWebsiteDescription', () => {
     it('extracts meta description', async () => {
       const html = `<html><head><meta name="description" content="A cool website"></head></html>`;
-      mockedAxios.get.mockResolvedValueOnce({ data: html, headers: {} });
+      (axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: html, headers: {} });
 
       const scraper = new ScraperService(3600);
       const result = await scraper.fetchWebsiteDescription('https://example.com');
@@ -76,7 +75,7 @@ describe('ScraperService', () => {
 
     it('falls back to og:description', async () => {
       const html = `<html><head><meta property="og:description" content="OG description"></head></html>`;
-      mockedAxios.get.mockResolvedValueOnce({ data: html, headers: {} });
+      (axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: html, headers: {} });
 
       const scraper = new ScraperService(3600);
       const result = await scraper.fetchWebsiteDescription('https://example.com');

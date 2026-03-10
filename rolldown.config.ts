@@ -9,6 +9,8 @@ export default defineConfig([
       format: 'esm',
       entryFileNames: '[name].js',
     },
+    // @ts-expect-error - jsx option not yet in types
+    jsx: 'react',
     external: [
       /^node:/,
       'axios',
@@ -29,15 +31,19 @@ export default defineConfig([
   },
   // CLI Build
   {
-    input: 'bin/cli.ts',
+    input: 'bin/cli.tsx',
     output: {
       dir: 'dist/bin',
       format: 'esm',
       entryFileNames: '[name].js',
       banner: '#!/usr/bin/env node\n',
     },
+    // @ts-expect-error - jsx option not yet in types
+    jsx: 'react',
     external: [
       'commander',
+      'ink',
+      'react',
       '../src/commands/enhance.js',
       '../src/index.js',
       /^node:/,
@@ -45,6 +51,58 @@ export default defineConfig([
       'path',
       'url',
       'readline/promises',
+    ],
+  },
+  // MCP Server Build
+  {
+    input: 'bin/mcp-server.ts',
+    output: {
+      dir: 'dist/bin',
+      format: 'esm',
+      entryFileNames: '[name].js',
+    },
+    external: [
+      /^node:/,
+      'axios',
+      'cheerio',
+      'dotenv',
+      'awesome-lint',
+      'fs',
+      'fs/promises',
+      'path',
+      'os',
+      'url',
+      'readline/promises',
+      'unified',
+      'remark-parse',
+      'remark-stringify',
+      'unist-util-visit',
+    ],
+  },
+  // HTTP Server Build
+  {
+    input: 'bin/http-server.ts',
+    output: {
+      dir: 'dist/bin',
+      format: 'esm',
+      entryFileNames: '[name].js',
+    },
+    external: [
+      /^node:/,
+      'axios',
+      'cheerio',
+      'dotenv',
+      'awesome-lint',
+      'fs',
+      'fs/promises',
+      'path',
+      'os',
+      'url',
+      'readline/promises',
+      'unified',
+      'remark-parse',
+      'remark-stringify',
+      'unist-util-visit',
     ],
   },
 ]);
