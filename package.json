@@ -55,7 +55,10 @@
     "cli",
     "markdown",
     "metadata",
-    "github"
+    "github",
+    "mcp",
+    "ai-agent",
+    "volunteer-computing"
   ],
   "author": "Ranjith Raj <ranjithraj@riseup.net>",
   "license": "AGPL-3.0-or-later",
