@@ -38,10 +38,9 @@ jobs:
         run: bun run build
 
       - name: Publish to npm
-        uses: npm/publish@v3
-        with:
-          provenance: true
-          token: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+          npm publish
 
       - name: Create GitHub Release
         uses: actions/github-script@v7
