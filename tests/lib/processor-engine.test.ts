@@ -1,12 +1,40 @@
 import { describe, it, expect, vi } from 'vitest';
+import { Effect, Layer, Option } from 'effect';
 import { ProcessorEngine, type Processor, type LinkNode } from '../../src/lib/processor-engine.js';
+import { SilentLive } from '../../src/services/logger.js';
+import { GitHubService } from '../../src/services/github.js';
+import { ScraperService } from '../../src/services/scraper.js';
+import { CacheService } from '../../src/services/cache.js';
+import { NetworkError } from '../../src/core/errors.js';
+
+// Minimal stub layers for services the processors don't use
+const StubGitHubLayer = Layer.succeed(GitHubService, {
+  fetchRepoMetadata: () => Effect.fail(new NetworkError({ url: '', message: 'stub' })),
+  fetchRepoReadme: () => Effect.fail(new NetworkError({ url: '', message: 'stub' })),
+  getRateLimitStatus: () => Effect.succeed(Option.none()),
+});
+
+const StubScraperLayer = Layer.succeed(ScraperService, {
+  fetchGitHubDescription: () => Effect.succeed(Option.none()),
+  fetchWebsiteDescription: () => Effect.succeed(Option.none()),
+});
+
+const StubCacheLayer = Layer.succeed(CacheService, {
+  get: () => Effect.succeed(Option.none()),
+  set: () => Effect.void,
+});
+
+const TestLayer = Layer.mergeAll(SilentLive, StubGitHubLayer, StubScraperLayer, StubCacheLayer);
+
+function runEngine(engine: ProcessorEngine, content: string) {
+  return Effect.runPromise(engine.process(content).pipe(Effect.provide(TestLayer)));
+}
 
 describe('ProcessorEngine', () => {
   it('processes markdown with no processors (passthrough)', async () => {
     const engine = new ProcessorEngine();
     const input = '# Title\n\n- [Link](https://example.com) - Description\n';
-
-    const output = await engine.process(input);
+    const output = await runEngine(engine, input);
     expect(output).toContain('Link');
     expect(output).toContain('https://example.com');
   });
@@ -14,13 +42,12 @@ describe('ProcessorEngine', () => {
   it('calls registered processors for each link', async () => {
     const engine = new ProcessorEngine();
     const mockProcessor: Processor = {
-      execute: vi.fn().mockResolvedValue(false),
+      execute: vi.fn().mockReturnValue(Effect.succeed(false)),
     };
-
     engine.register(mockProcessor);
 
     const input = '- [Link1](https://example.com) - Desc1\n- [Link2](https://other.com) - Desc2\n';
-    await engine.process(input);
+    await runEngine(engine, input);
 
     expect(mockProcessor.execute).toHaveBeenCalledTimes(2);
   });
@@ -30,22 +57,20 @@ describe('ProcessorEngine', () => {
     const order: string[] = [];
 
     const proc1: Processor = {
-      execute: vi.fn().mockImplementation(async () => {
-        order.push('proc1');
-        return false;
-      }),
+      execute: vi.fn().mockImplementation(() =>
+        Effect.sync(() => { order.push('proc1'); return false; }),
+      ),
     };
     const proc2: Processor = {
-      execute: vi.fn().mockImplementation(async () => {
-        order.push('proc2');
-        return false;
-      }),
+      execute: vi.fn().mockImplementation(() =>
+        Effect.sync(() => { order.push('proc2'); return false; }),
+      ),
     };
 
     engine.register(proc1);
     engine.register(proc2);
 
-    await engine.process('- [Link](https://example.com)\n');
+    await runEngine(engine, '- [Link](https://example.com)\n');
 
     expect(order).toEqual(['proc1', 'proc2']);
   });
@@ -55,14 +80,13 @@ describe('ProcessorEngine', () => {
     let capturedUrl = '';
 
     const proc: Processor = {
-      execute: vi.fn().mockImplementation(async (linkNode: LinkNode) => {
-        capturedUrl = linkNode.url;
-        return false;
-      }),
+      execute: vi.fn().mockImplementation((linkNode: LinkNode) =>
+        Effect.sync(() => { capturedUrl = linkNode.url; return false; }),
+      ),
     };
 
     engine.register(proc);
-    await engine.process('- [My Link](https://github.com/user/repo)\n');
+    await runEngine(engine, '- [My Link](https://github.com/user/repo)\n');
 
     expect(capturedUrl).toBe('https://github.com/user/repo');
   });

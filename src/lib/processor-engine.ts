@@ -3,6 +3,11 @@ import remarkParse from 'remark-parse';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import { Node } from 'unist';
+import { Effect, Ref } from 'effect';
+import { LoggerService } from '../services/logger.js';
+import { GitHubService } from '../services/github.js';
+import { ScraperService } from '../services/scraper.js';
+import { EnhanceError, NetworkError } from '../core/errors.js';
 
 export interface LinkNode extends Node {
   type: 'link';
@@ -11,72 +16,76 @@ export interface LinkNode extends Node {
 }
 
 export interface Processor {
-  execute(linkNode: LinkNode, parent: any, index: number): Promise<boolean>;
+  execute(
+    linkNode: LinkNode,
+    parent: any,
+    index: number,
+  ): Effect.Effect<boolean, NetworkError, GitHubService | ScraperService>;
 }
 
-/**
- * ProcessorEngine handles markdown transformation
- */
 export class ProcessorEngine {
   private processors: Processor[] = [];
 
-  /**
-   * Register a processor in the pipeline
-   */
   register(processor: Processor): void {
     this.processors.push(processor);
   }
 
-  /**
-   * Run the transformation pipeline
-   */
-  async process(content: string): Promise<string> {
-    const tree = unified().use(remarkParse).parse(content);
+  process(
+    content: string,
+  ): Effect.Effect<
+    string,
+    EnhanceError | NetworkError,
+    LoggerService | GitHubService | ScraperService
+  > {
+    const processors = this.processors;
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const tree = unified().use(remarkParse).parse(content);
 
-    const linkPromises: Promise<void>[] = [];
+      let totalLinks = 0;
+      visit(tree, 'link', () => { totalLinks++; });
 
-    let totalLinks = 0;
-    visit(tree, 'link', () => {
-      totalLinks++;
+      const processedRef = yield* Ref.make(0);
+      const modifiedRef = yield* Ref.make(0);
+
+      const linkEffects: Effect.Effect<void, NetworkError, GitHubService | ScraperService>[] = [];
+
+      visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
+        if (index === undefined) return;
+
+        linkEffects.push(
+          Effect.gen(function* () {
+            let modified = false;
+            for (const processor of processors) {
+              const result = yield* processor.execute(linkNode as LinkNode, parent, index);
+              if (result) modified = true;
+            }
+            const processed = yield* Ref.updateAndGet(processedRef, (n) => n + 1);
+            if (modified) yield* Ref.update(modifiedRef, (n) => n + 1);
+            const modifiedCount = yield* Ref.get(modifiedRef);
+            if (modifiedCount > 0) {
+              yield* logger.log(
+                `\r✨ Processed ${processed}/${totalLinks} links, enhanced ${modifiedCount}...`,
+              );
+            }
+          }),
+        );
+      });
+
+      yield* Effect.all(linkEffects, { concurrency: 'unbounded' });
+
+      const processed = yield* Ref.get(processedRef);
+      const modified = yield* Ref.get(modifiedRef);
+      yield* logger.log(`\n✅ Finished: ${processed} links analyzed, ${modified} enhanced.`);
+
+      return unified()
+        .use(remarkStringify, {
+          bullet: '-',
+          emphasis: '_',
+          strong: '*',
+          listItemIndent: 'one',
+        })
+        .stringify(tree as any);
     });
-
-    let processedCount = 0;
-    let modifiedCount = 0;
-
-    visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
-      if (index === undefined) return;
-
-      linkPromises.push(
-        (async () => {
-          let modified = false;
-
-          for (const processor of this.processors) {
-            const result = await processor.execute(linkNode as LinkNode, parent, index);
-            if (result) modified = true;
-          }
-
-          processedCount++;
-          if (modified) modifiedCount++;
-
-          if (modifiedCount > 0) {
-            process.stdout.write(
-              `\r✨ Processed ${processedCount}/${totalLinks} links, enhanced ${modifiedCount}...`,
-            );
-          }
-        })(),
-      );
-    });
-
-    await Promise.all(linkPromises);
-    console.log(`\n✅ Finished: ${processedCount} links analyzed, ${modifiedCount} enhanced.`);
-
-    return unified()
-      .use(remarkStringify, {
-        bullet: '-',
-        emphasis: '_',
-        strong: '*',
-        listItemIndent: 'one',
-      })
-      .stringify(tree as any);
   }
 }
