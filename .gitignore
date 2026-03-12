@@ -76,3 +76,6 @@ temp/
 # Test output files
 tests/output*.md
 enhanced-readme.md
+
+# Git worktrees
+.worktrees/
