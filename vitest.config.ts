@@ -14,6 +14,7 @@ export default defineConfig({
         'src/index.ts',
         'src/commands/**',
         'src/services/git.ts',
+        'src/services/base-service.ts',
         'src/ui/**',
       ],
       thresholds: {
