@@ -1,47 +1,44 @@
+import { Effect, Option } from 'effect';
 import { parseGitHubUrl } from '../core/utils.js';
 import { ScraperService } from '../services/scraper.js';
 import { Processor, LinkNode } from './processor-engine.js';
+import { NetworkError } from '../core/errors.js';
 import { DESCRIPTION_MIN_LENGTH } from '../core/constants.js';
 
-/**
- * DescriptionProcessor improves link descriptions via scraping.
- */
 export class DescriptionProcessor implements Processor {
-  private scraperService: ScraperService;
+  execute(
+    linkNode: LinkNode,
+    parent: any,
+    index: number,
+  ): Effect.Effect<boolean, NetworkError, ScraperService> {
+    return Effect.gen(function* () {
+      const url = linkNode.url;
 
-  constructor(scraperService: ScraperService) {
-    this.scraperService = scraperService;
-  }
+      if (index + 1 >= parent.children.length) return false;
 
-  async execute(linkNode: LinkNode, parent: any, index: number): Promise<boolean> {
-    const url = linkNode.url;
+      const nextNode = parent.children[index + 1];
+      if (nextNode.type !== 'text') return false;
 
-    if (index + 1 >= parent.children.length) return false;
+      const currentText = nextNode.value.replace(/^\s*-\s*/, '').trim();
+      if (currentText.length > DESCRIPTION_MIN_LENGTH) return false;
 
-    const nextNode = parent.children[index + 1];
-    if (nextNode.type !== 'text') return false;
+      const scraper = yield* ScraperService;
+      const githubInfo = parseGitHubUrl(url);
 
-    const currentText = nextNode.value.replace(/^\s*-\s*/, '').trim();
+      const descriptionEffect = githubInfo
+        ? scraper.fetchGitHubDescription(githubInfo.owner, githubInfo.repo)
+        : scraper.fetchWebsiteDescription(url);
 
-    if (currentText.length > DESCRIPTION_MIN_LENGTH) return false;
-
-    let newDescription: string | null = null;
-    const githubInfo = parseGitHubUrl(url);
-
-    if (githubInfo) {
-      newDescription = await this.scraperService.fetchGitHubDescription(
-        githubInfo.owner,
-        githubInfo.repo,
+      const newDescription = yield* descriptionEffect.pipe(
+        Effect.option, // NetworkError → None
+        Effect.map((opt) => Option.flatten(opt)),
       );
-    } else {
-      newDescription = await this.scraperService.fetchWebsiteDescription(url);
-    }
 
-    if (newDescription && newDescription !== currentText) {
-      nextNode.value = ` - ${newDescription}`;
+      if (Option.isNone(newDescription)) return false;
+      if (Option.getOrNull(newDescription) === currentText) return false;
+
+      nextNode.value = ` - ${Option.getOrNull(newDescription)}`;
       return true;
-    }
-
-    return false;
+    });
   }
 }

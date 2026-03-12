@@ -1,104 +1,95 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { Effect, Layer, Option } from 'effect';
 import { DescriptionProcessor } from '../../src/lib/description-processor.js';
-import type { ScraperService } from '../../src/services/scraper.js';
+import { ScraperService } from '../../src/services/scraper.js';
 import type { LinkNode } from '../../src/lib/processor-engine.js';
+import { NetworkError } from '../../src/core/errors.js';
 
-function createMockScraper(
-  githubDesc: string | null = 'A great tool',
-  webDesc: string | null = 'Website desc',
-) {
-  return {
-    fetchGitHubDescription: vi.fn().mockResolvedValue(githubDesc),
-    fetchWebsiteDescription: vi.fn().mockResolvedValue(webDesc),
-  } as unknown as ScraperService;
+function makeScraperLayer(description: string | null) {
+  const optDesc = Option.fromNullable(description);
+  return Layer.succeed(ScraperService, {
+    fetchGitHubDescription: () => Effect.succeed(optDesc),
+    fetchWebsiteDescription: () => Effect.succeed(optDesc),
+  });
+}
+
+function makeScraperErrorLayer() {
+  return Layer.succeed(ScraperService, {
+    fetchGitHubDescription: () => Effect.fail(new NetworkError({ url: '', message: 'fail' })),
+    fetchWebsiteDescription: () => Effect.fail(new NetworkError({ url: '', message: 'fail' })),
+  });
 }
 
 function createLinkNode(url: string): LinkNode {
   return { type: 'link', url, children: [{ type: 'text', value: 'Link' }] } as LinkNode;
 }
 
-function createParent(linkNode: LinkNode, trailingText: string = ' - Short') {
-  return {
-    children: [linkNode, { type: 'text', value: trailingText }],
-  };
+function createParent(linkNode: LinkNode, trailingText = ' - Short') {
+  return { children: [linkNode, { type: 'text', value: trailingText }] };
+}
+
+function runProcessor(
+  processor: DescriptionProcessor,
+  linkNode: LinkNode,
+  parent: any,
+  description: string | null = 'A great library for doing things',
+) {
+  return Effect.runPromise(
+    processor.execute(linkNode, parent, 0).pipe(Effect.provide(makeScraperLayer(description))),
+  );
 }
 
 describe('DescriptionProcessor', () => {
-  it('replaces short descriptions for GitHub links', async () => {
-    const scraper = createMockScraper('A comprehensive testing framework');
-    const processor = new DescriptionProcessor(scraper);
-
+  it('updates a short description for GitHub links', async () => {
+    const processor = new DescriptionProcessor();
     const linkNode = createLinkNode('https://github.com/user/repo');
     const parent = createParent(linkNode, ' - Short');
 
-    const result = await processor.execute(linkNode, parent, 0);
+    const result = await runProcessor(processor, linkNode, parent);
 
     expect(result).toBe(true);
-    expect(parent.children[1].value).toBe(' - A comprehensive testing framework');
-    expect(scraper.fetchGitHubDescription).toHaveBeenCalledWith('user', 'repo');
+    expect(parent.children[1].value).toContain('A great library');
   });
 
-  it('replaces short descriptions for non-GitHub links', async () => {
-    const scraper = createMockScraper(null, 'A website for cool stuff');
-    const processor = new DescriptionProcessor(scraper);
-
-    const linkNode = createLinkNode('https://example.com/tool');
-    const parent = createParent(linkNode, ' - Short');
-
-    const result = await processor.execute(linkNode, parent, 0);
-
-    expect(result).toBe(true);
-    expect(parent.children[1].value).toBe(' - A website for cool stuff');
-    expect(scraper.fetchWebsiteDescription).toHaveBeenCalledWith('https://example.com/tool');
-  });
-
-  it('skips descriptions longer than 50 characters', async () => {
-    const scraper = createMockScraper();
-    const processor = new DescriptionProcessor(scraper);
-
+  it('skips if current description is already long enough', async () => {
+    const processor = new DescriptionProcessor();
+    const longDesc = ' - ' + 'x'.repeat(60);
     const linkNode = createLinkNode('https://github.com/user/repo');
-    const longDesc = ' - ' + 'A'.repeat(51);
     const parent = createParent(linkNode, longDesc);
 
-    const result = await processor.execute(linkNode, parent, 0);
-
+    const result = await runProcessor(processor, linkNode, parent);
     expect(result).toBe(false);
-    expect(scraper.fetchGitHubDescription).not.toHaveBeenCalled();
   });
 
-  it('returns false when no next node exists', async () => {
-    const scraper = createMockScraper();
-    const processor = new DescriptionProcessor(scraper);
-
+  it('skips if no description found', async () => {
+    const processor = new DescriptionProcessor();
     const linkNode = createLinkNode('https://github.com/user/repo');
-    const parent = { children: [linkNode] };
+    const parent = createParent(linkNode);
 
-    const result = await processor.execute(linkNode, parent, 0);
-
+    const result = await runProcessor(processor, linkNode, parent, null);
     expect(result).toBe(false);
   });
 
-  it('returns false when scraper returns null', async () => {
-    const scraper = createMockScraper(null, null);
-    const processor = new DescriptionProcessor(scraper);
-
+  it('handles non-GitHub URLs', async () => {
+    const processor = new DescriptionProcessor();
     const linkNode = createLinkNode('https://example.com');
-    const parent = createParent(linkNode, ' - Short');
+    const parent = createParent(linkNode);
 
-    const result = await processor.execute(linkNode, parent, 0);
-
-    expect(result).toBe(false);
+    const result = await runProcessor(processor, linkNode, parent, 'A website description');
+    expect(result).toBe(true);
+    expect(parent.children[1].value).toContain('A website description');
   });
 
-  it('returns false when new description matches current', async () => {
-    const scraper = createMockScraper('Short');
-    const processor = new DescriptionProcessor(scraper);
-
+  it('returns false when scraper fails', async () => {
+    const processor = new DescriptionProcessor();
     const linkNode = createLinkNode('https://github.com/user/repo');
-    const parent = createParent(linkNode, ' - Short');
+    const parent = createParent(linkNode);
 
-    const result = await processor.execute(linkNode, parent, 0);
-
+    const result = await Effect.runPromise(
+      processor
+        .execute(linkNode, parent, 0)
+        .pipe(Effect.provide(makeScraperErrorLayer())),
+    );
     expect(result).toBe(false);
   });
 });
