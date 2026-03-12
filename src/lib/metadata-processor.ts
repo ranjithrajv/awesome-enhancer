@@ -1,51 +1,49 @@
+import { Effect, Option } from 'effect';
 import { parseGitHubUrl } from '../core/utils.js';
 import { GitHubService } from '../services/github.js';
 import { BadgeGenerator } from './badge-generator.js';
 import { Processor, LinkNode } from './processor-engine.js';
+import { NetworkError } from '../core/errors.js';
 
-/**
- * MetadataProcessor adds GitHub stats badges to repository links.
- */
 export class MetadataProcessor implements Processor {
-  private githubService: GitHubService;
   private badgeGenerator: BadgeGenerator;
 
-  constructor(githubService: GitHubService, badgeGenerator: BadgeGenerator) {
-    this.githubService = githubService;
+  constructor(badgeGenerator: BadgeGenerator) {
     this.badgeGenerator = badgeGenerator;
   }
 
-  async execute(linkNode: LinkNode, parent: any, index: number): Promise<boolean> {
-    const url = linkNode.url;
-    const githubInfo = parseGitHubUrl(url);
+  execute(
+    linkNode: LinkNode,
+    parent: any,
+    index: number,
+  ): Effect.Effect<boolean, NetworkError, GitHubService> {
+    const badgeGenerator = this.badgeGenerator;
+    return Effect.gen(function* () {
+      const url = linkNode.url;
+      const githubInfo = parseGitHubUrl(url);
+      if (!githubInfo) return false;
 
-    if (!githubInfo) return false;
+      if (index + 1 >= parent.children.length) {
+        const newTextNode = { type: 'text', value: '' };
+        parent.children.splice(index + 1, 0, newTextNode);
+      }
 
-    if (index + 1 >= parent.children.length) {
-      const newTextNode = { type: 'text', value: '' };
-      parent.children.splice(index + 1, 0, newTextNode);
-    }
+      const nextNode = parent.children[index + 1];
+      if (nextNode.type !== 'text') return false;
+      if (nextNode.value.includes('img.shields.io')) return false;
 
-    const nextNode = parent.children[index + 1];
-    if (nextNode.type !== 'text') return false;
+      const github = yield* GitHubService;
+      const metadata = yield* github
+        .fetchRepoMetadata(githubInfo.owner, githubInfo.repo)
+        .pipe(Effect.option); // NetworkError → Option.None instead of failure
 
-    const metadata = await this.githubService.fetchRepoMetadata(githubInfo.owner, githubInfo.repo);
-    if (!metadata) return false;
+      if (Option.isNone(metadata)) return false;
 
-    if (nextNode.value.includes('img.shields.io')) return false;
+      const starsBadge = badgeGenerator.generateBadge('stars', githubInfo.owner, githubInfo.repo);
+      const langBadge = badgeGenerator.generateBadge('language', githubInfo.owner, githubInfo.repo);
 
-    const starsBadge = this.badgeGenerator.generateBadge(
-      'stars',
-      githubInfo.owner,
-      githubInfo.repo,
-    );
-    const langBadge = this.badgeGenerator.generateBadge(
-      'language',
-      githubInfo.owner,
-      githubInfo.repo,
-    );
-
-    nextNode.value = `${nextNode.value} ${starsBadge} ${langBadge}`;
-    return true;
+      nextNode.value = `${nextNode.value} ${starsBadge} ${langBadge}`;
+      return true;
+    });
   }
 }
