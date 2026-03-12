@@ -1,58 +1,95 @@
 import * as cheerio from 'cheerio';
-import { BaseService } from './base-service.js';
+import axios from 'axios';
+import { Context, Effect, Layer, Option } from 'effect';
+import { CacheService } from './cache.js';
+import { LoggerService } from './logger.js';
+import { NetworkError } from '../core/errors.js';
 import { isValidUrl } from '../core/utils.js';
-import { DEFAULT_CACHE_TTL, DESCRIPTION_MAX_LENGTH } from '../core/constants.js';
+import { DEFAULT_REQUEST_TIMEOUT, DESCRIPTION_MAX_LENGTH } from '../core/constants.js';
 
-export class ScraperService extends BaseService {
-  constructor(cacheTTL: number = DEFAULT_CACHE_TTL) {
-    super('awesome-enhance-scraper', cacheTTL);
+export class ScraperService extends Context.Tag('ScraperService')<
+  ScraperService,
+  {
+    fetchGitHubDescription: (
+      owner: string,
+      repo: string,
+    ) => Effect.Effect<Option.Option<string>, NetworkError>;
+    fetchWebsiteDescription: (url: string) => Effect.Effect<Option.Option<string>, NetworkError>;
   }
+>() {}
 
-  async fetchGitHubDescription(owner: string, repo: string): Promise<string | null> {
-    const url = `https://github.com/${owner}/${repo}`;
-    const result = await this.getCached<string>(url);
+export const ScraperLive: Layer.Layer<
+  ScraperService,
+  never,
+  CacheService | LoggerService
+> = Layer.effect(
+  ScraperService,
+  Effect.gen(function* () {
+    const cache = yield* CacheService;
+    const logger = yield* LoggerService;
 
-    if (!result) return null;
+    function fetchHtml(url: string): Effect.Effect<string, NetworkError> {
+      return Effect.gen(function* () {
+        const cached = yield* cache.get<string>(url);
+        if (Option.isSome(cached)) return cached.value;
 
-    const $ = cheerio.load(result.data);
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            axios.get<string>(url, {
+              headers: { 'User-Agent': 'awesome-enhance-scraper' },
+              timeout: DEFAULT_REQUEST_TIMEOUT,
+            }),
+          catch: (e: any) =>
+            new NetworkError({ url, statusCode: e.response?.status, message: e.message ?? String(e) }),
+        });
 
-    let description = $('meta[property="og:description"]').attr('content');
-
-    if (!description || description.length < 10) {
-      description = $('[data-pjax="#repo-content-pjax-container"] p').first().text().trim();
+        yield* cache.set(url, response.data);
+        return response.data;
+      }).pipe(
+        Effect.tapError((e) =>
+          logger.warn(`⚠️ [ScraperService] Failed to fetch ${url}: ${e.message}`),
+        ),
+      );
     }
 
-    return this.cleanDescription(description);
-  }
-
-  async fetchWebsiteDescription(url: string): Promise<string | null> {
-    if (!isValidUrl(url)) return null;
-
-    const result = await this.getCached<string>(url);
-    if (!result) return null;
-
-    const $ = cheerio.load(result.data);
-
-    const description =
-      $('meta[name="description"]').attr('content') ||
-      $('meta[property="og:description"]').attr('content') ||
-      $('meta[name="twitter:description"]').attr('content');
-
-    return this.cleanDescription(description);
-  }
-
-  private cleanDescription(description: string | undefined): string | null {
-    if (!description) return null;
-
-    let cleaned = description
-      .replace(/^GitHub - [^:]+:\s*/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
-      cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
+    function cleanDescription(description: string | undefined): Option.Option<string> {
+      if (!description) return Option.none();
+      let cleaned = description.replace(/^GitHub - [^:]+:\s*/, '').replace(/\s+/g, ' ').trim();
+      if (!cleaned) return Option.none();
+      if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
+        cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
+      }
+      return Option.some(cleaned);
     }
 
-    return cleaned;
-  }
-}
+    return {
+      fetchGitHubDescription: (owner: string, repo: string) => {
+        const url = `https://github.com/${owner}/${repo}`;
+        return fetchHtml(url).pipe(
+          Effect.map((html) => {
+            const $ = cheerio.load(html);
+            let description = $('meta[property="og:description"]').attr('content');
+            if (!description || description.length < 10) {
+              description = $('[data-pjax="#repo-content-pjax-container"] p').first().text().trim();
+            }
+            return cleanDescription(description);
+          }),
+        );
+      },
+
+      fetchWebsiteDescription: (url: string) => {
+        if (!isValidUrl(url)) return Effect.succeed(Option.none<string>());
+        return fetchHtml(url).pipe(
+          Effect.map((html) => {
+            const $ = cheerio.load(html);
+            const description =
+              $('meta[name="description"]').attr('content') ||
+              $('meta[property="og:description"]').attr('content') ||
+              $('meta[name="twitter:description"]').attr('content');
+            return cleanDescription(description);
+          }),
+        );
+      },
+    };
+  }),
+);
