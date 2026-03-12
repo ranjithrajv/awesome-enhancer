@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import dotenv from 'dotenv';
+import { DEFAULT_CACHE_TTL } from './constants.js';
 
 // Load .env file
 dotenv.config();
@@ -11,7 +12,7 @@ export interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-  cacheTTL: 86400, // 24 hours
+  cacheTTL: DEFAULT_CACHE_TTL,
 };
 
 /**

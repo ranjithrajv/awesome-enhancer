@@ -1,5 +1,6 @@
 import axios, { type AxiosResponse } from 'axios';
 import { Cache } from '../core/cache.js';
+import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_REQUEST_TIMEOUT } from '../core/constants.js';
 
 export interface ServiceResponse<T> {
   data: T;
@@ -14,16 +15,16 @@ export class BaseService {
   protected cache: Cache;
   protected userAgent: string;
 
-  constructor(serviceName: string, cacheTTL: number = 86400) {
+  constructor(serviceName: string, cacheTTL: number = DEFAULT_CACHE_TTL) {
     this.serviceName = serviceName;
-    this.cache = new Cache('.awesome-cache', cacheTTL);
+    this.cache = new Cache(DEFAULT_CACHE_DIR, cacheTTL);
     this.userAgent = serviceName;
   }
 
   async getCached<T>(
     url: string,
     headers: any = {},
-    timeout: number = 10000,
+    timeout: number = DEFAULT_REQUEST_TIMEOUT,
   ): Promise<ServiceResponse<T> | null> {
     const cached = await this.cache.get<ServiceResponse<T>>(url);
     if (cached) {

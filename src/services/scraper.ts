@@ -1,9 +1,10 @@
 import * as cheerio from 'cheerio';
 import { BaseService } from './base-service.js';
 import { isValidUrl } from '../core/utils.js';
+import { DEFAULT_CACHE_TTL, DESCRIPTION_MAX_LENGTH } from '../core/constants.js';
 
 export class ScraperService extends BaseService {
-  constructor(cacheTTL: number = 86400) {
+  constructor(cacheTTL: number = DEFAULT_CACHE_TTL) {
     super('awesome-enhance-scraper', cacheTTL);
   }
 
@@ -48,8 +49,8 @@ export class ScraperService extends BaseService {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (cleaned.length > 200) {
-      cleaned = cleaned.substring(0, 197) + '...';
+    if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
+      cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
     }
 
     return cleaned;

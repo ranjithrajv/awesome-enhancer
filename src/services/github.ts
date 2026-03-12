@@ -1,10 +1,11 @@
 import { BaseService } from './base-service.js';
+import { DEFAULT_CACHE_TTL } from '../core/constants.js';
 
 export class GitHubService extends BaseService {
   private githubToken: string | null;
   private rateLimitRemaining: string | null = null;
 
-  constructor(githubToken: string | null = null, cacheTTL: number = 86400) {
+  constructor(githubToken: string | null = null, cacheTTL: number = DEFAULT_CACHE_TTL) {
     super('awesome-enhance-github', cacheTTL);
     this.githubToken = githubToken;
   }
