@@ -1,10 +1,12 @@
+import { DEFAULT_BADGE_STYLE } from '../core/constants.js';
+
 /**
  * BadgeGenerator handles creating shields.io badges
  */
 export class BadgeGenerator {
   private style: string;
 
-  constructor(style: string = 'flat-square') {
+  constructor(style: string = DEFAULT_BADGE_STYLE) {
     this.style = style;
   }
 
