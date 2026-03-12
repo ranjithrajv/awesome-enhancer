@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-12
+
+### Added
+
+- **Effect integration**: All async operations now return `Effect<A, E, R>` — typed error channel, no more `Promise<T | null>`.
+- **Zod validation**: All external inputs (CLI options, HTTP bodies, MCP args) validated with Zod schemas at system boundaries.
+- **Typed error hierarchy**: `NetworkError`, `ConfigError`, `EnhanceError`, `ValidationError` via `Data.TaggedError` — exhaustive matching, structural equality.
+- **Effect Layers for DI**: `GitHubService`, `ScraperService`, `CacheService`, `LoggerService` as Effect `Context.Tag` Layers — no more constructor-injected dependencies.
+- **`LoggerService`**: `ConsoleLive` (CLI) and `SilentLive` (library/tests) layers — no more `console.*` in library code.
+- **`CacheService`**: `FileCacheLive(cacheDir, ttl)` layer wrapping existing cache.
+- **`src/core/constants.ts`**: Single source of truth for all magic numbers (`DEFAULT_CACHE_TTL`, `DEFAULT_REQUEST_TIMEOUT`, etc.).
+- **`src/core/schemas.ts`**: Zod schemas shared across CLI, HTTP, and MCP — `EnhanceOptionsSchema`, `HttpEnhanceLocalSchema`, `HttpEnhanceGithubSchema`.
+- **`src/core/engine-factory.ts`**: `createEngine(config)` — eliminates duplicated processor registration.
+- **`src/core/app-layer.ts`**: `buildAppLayer(options)` — assembles full service Layer from parsed options.
+- **`src/core/runner.ts`**: Shared `runEnhanceLocal` / `runEnhanceGithub` — eliminates temp-dir duplication between MCP and HTTP servers.
+- **`zod-to-json-schema`**: MCP tool `inputSchema` now derived from Zod schemas — no more manual duplication.
+
+### Changed
+
+- **Breaking**: `enhance()` now returns `Effect<string, AppError, never>` instead of `Promise<string>`. Call `Effect.runPromise(enhance(content, options))` at your boundary.
+- `bin/http-server.ts`: Refactored with `readJsonBody` helper (eliminates 3× repeated chunk-reading), Zod body validation, shared runner.
+- `bin/mcp-server.ts`: Reduced from ~327 lines to ~56 lines using `zodToJsonSchema` and shared runner.
+
+### Removed
+
+- `src/services/base-service.ts`: Deleted — fully replaced by `CacheService` + `LoggerService` Layers.
+- `enhance_with_json_output` MCP tool: Removed (redundant with `enhance_local_file`).
+
 ## [0.2.0] - 2026-03-11
 
 ### Added
