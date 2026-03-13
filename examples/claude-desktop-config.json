@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "awesome-enhance": {
+    "awesome-enhancer": {
       "command": "npx",
-      "args": ["awesome-enhance-mcp"]
+      "args": ["awesome-enhancer-mcp"]
     }
   }
 }

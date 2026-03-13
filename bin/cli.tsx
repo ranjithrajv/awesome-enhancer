@@ -41,7 +41,7 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
       printHelp();
       process.exit(0);
     } else if (arg === '--version' || arg === '-v') {
-      console.log('awesome-enhance v0.1.0');
+      console.log('awesome-enhancer v0.1.0');
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       fileOrUrl = arg;
@@ -53,11 +53,11 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
 
 function printHelp() {
   console.log(`
-🚀 awesome-enhance v0.1.0
+🚀 awesome-enhancer v0.1.0
 
 CLI tool to enhance awesome lists with metadata and descriptions
 
-Usage: awesome-enhance [file-or-url] [options]
+Usage: awesome-enhancer [file-or-url] [options]
 
 Arguments:
   file-or-url              Path to local markdown file or GitHub repository URL
@@ -73,9 +73,9 @@ Options:
   --version, -v            Show version number
 
 Examples:
-  awesome-enhance README.md --add-metadata
-  awesome-enhance https://github.com/user/awesome-list --update-descriptions
-  awesome-enhance README.md --add-metadata --update-descriptions --dry-run
+  awesome-enhancer README.md --add-metadata
+  awesome-enhancer https://github.com/user/awesome-list --update-descriptions
+  awesome-enhancer README.md --add-metadata --update-descriptions --dry-run
 `);
 }
 
@@ -149,7 +149,7 @@ const InputPrompt: React.FC<{
 const WelcomeScreen: React.FC<{ onSelect: (value: string) => void }> = ({ onSelect }) => (
   <Box flexDirection="column">
     <Text bold color="cyan">
-      🚀 awesome-enhance
+      🚀 awesome-enhancer
     </Text>
     <Text color="gray">{'─'.repeat(40)}</Text>
     <Text>What would you like to enhance?</Text>

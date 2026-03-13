@@ -46,13 +46,13 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (method === 'GET' && path === '/health') {
-      sendJson(res, 200, { status: 'ok', name: 'awesome-enhance' });
+      sendJson(res, 200, { status: 'ok', name: 'awesome-enhancer' });
       return;
     }
 
     if (method === 'GET' && path === '/') {
       sendJson(res, 200, {
-        name: 'awesome-enhance',
+        name: 'awesome-enhancer',
         endpoints: {
           'POST /enhance': 'Enhance a local file or URL',
           'POST /enhance/local': 'Enhance local file',
@@ -103,7 +103,7 @@ const server = http.createServer(async (req, res) => {
 
 const port = parseInt(process.env.PORT || String(DEFAULT_PORT), 10);
 server.listen(port, () => {
-  console.log(`🚀 awesome-enhance server running at http://localhost:${port}`);
+  console.log(`🚀 awesome-enhancer server running at http://localhost:${port}`);
   console.log(`   POST /enhance/local   - Enhance local file`);
   console.log(`   POST /enhance/github  - Enhance GitHub URL`);
   console.log(`   GET  /health          - Health check`);

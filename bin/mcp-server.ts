@@ -6,7 +6,7 @@ import { HttpEnhanceLocalSchema, HttpEnhanceGithubSchema } from '../src/core/sch
 import { runEnhanceLocal, runEnhanceGithub } from '../src/core/runner.js';
 
 const server = new Server(
-  { name: 'awesome-enhance', version: '0.1.0' },
+  { name: 'awesome-enhancer', version: '0.1.0' },
   { capabilities: { tools: {} } },
 );
 

@@ -1,5 +1,5 @@
 {
-  "name": "awesome-enhance",
+  "name": "awesome-enhancer",
   "version": "0.3.0",
   "type": "module",
   "description": "CLI tool to automatically enhance awesome lists with metadata and improved descriptions",
@@ -13,9 +13,9 @@
   "homepage": "https://github.com/ranjithrajv/awesome-enhancer#readme",
   "main": "dist/src/index.js",
   "bin": {
-    "awesome-enhance": "dist/bin/cli.js",
-    "awesome-enhance-mcp": "dist/bin/mcp-server.js",
-    "awesome-enhance-server": "dist/bin/http-server.js"
+    "awesome-enhancer": "dist/bin/cli.js",
+    "awesome-enhancer-mcp": "dist/bin/mcp-server.js",
+    "awesome-enhancer-server": "dist/bin/http-server.js"
   },
   "files": [
     "dist",

@@ -55,6 +55,6 @@ describe('E2E: Help and CLI Interface', () => {
   it('shows version', async () => {
     const result = await runCli(['--version']);
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('awesome-enhance');
+    expect(result.stdout).toContain('awesome-enhancer');
   });
 });

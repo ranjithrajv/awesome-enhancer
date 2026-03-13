@@ -47,7 +47,7 @@ export const GitHubLive = (
             const response = yield* Effect.tryPromise({
               try: () =>
                 axios.get<RepoMetadata>(url, {
-                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhance-github' },
+                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhancer-github' },
                   timeout: DEFAULT_REQUEST_TIMEOUT,
                 }),
               catch: (e: any) =>
@@ -75,7 +75,7 @@ export const GitHubLive = (
                   headers: {
                     ...authHeaders(),
                     Accept: 'application/vnd.github.v3.raw',
-                    'User-Agent': 'awesome-enhance-github',
+                    'User-Agent': 'awesome-enhancer-github',
                   },
                   timeout: DEFAULT_REQUEST_TIMEOUT,
                 }),

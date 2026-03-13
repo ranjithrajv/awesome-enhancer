@@ -1,13 +1,13 @@
-# awesome-enhance
+# awesome-enhancer
 
 AI-agent friendly CLI tool to automatically enhance awesome lists with metadata and improved descriptions.
 
 ## Installation
 
 ```bash
-npm install -g awesome-enhance
+npm install -g awesome-enhancer
 # or
-bun install -g awesome-enhance
+bun install -g awesome-enhancer
 ```
 
 ## For AI Agents
@@ -85,21 +85,21 @@ Enhance and get results as JSON for programmatic use.
 
 ```bash
 # Add metadata to local file
-awesome-enhance README.md --add-metadata
+awesome-enhancer README.md --add-metadata
 
 # Add metadata and improve descriptions
-awesome-enhance README.md --add-metadata --update-descriptions
+awesome-enhancer README.md --add-metadata --update-descriptions
 
 # Preview changes without writing
-awesome-enhance README.md --add-metadata --dry-run
+awesome-enhancer README.md --add-metadata --dry-run
 
 # Enhance from GitHub URL
-awesome-enhance https://github.com/user/awesome-list --add-metadata
+awesome-enhancer https://github.com/user/awesome-list --add-metadata
 ```
 
 ### JSON Output
 
 ```bash
 # Get JSON output for programmatic use
-awesome-enhance README.md --add-metadata --dry-run --json
+awesome-enhancer README.md --add-metadata --dry-run --json
 ```

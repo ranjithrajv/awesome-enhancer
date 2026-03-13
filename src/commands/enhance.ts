@@ -26,7 +26,7 @@ export async function enhanceCommand(
   options: EnhanceCommandOptions,
 ) {
   const program = Effect.gen(function* () {
-    console.log('🚀 Starting awesome-enhance...\n');
+    console.log('🚀 Starting awesome-enhancer...\n');
 
     let resolvedFileOrUrl = fileOrUrl;
 

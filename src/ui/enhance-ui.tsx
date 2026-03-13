@@ -81,7 +81,7 @@ export const EnhanceUI: React.FC<EnhanceUIProps> = ({ state }) => {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold color="cyan">
-        🚀 awesome-enhance
+        🚀 awesome-enhancer
       </Text>
       <Text color="gray">{'─'.repeat(40)}</Text>
       {renderStage()}

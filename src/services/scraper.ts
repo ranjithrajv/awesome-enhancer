@@ -36,7 +36,7 @@ export const ScraperLive: Layer.Layer<
         const response = yield* Effect.tryPromise({
           try: () =>
             axios.get<string>(url, {
-              headers: { 'User-Agent': 'awesome-enhance-scraper' },
+              headers: { 'User-Agent': 'awesome-enhancer-scraper' },
               timeout: DEFAULT_REQUEST_TIMEOUT,
             }),
           catch: (e: any) =>
