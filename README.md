@@ -2,9 +2,13 @@
 
 > CLI tool to automatically enhance awesome lists with metadata and improved descriptions
 
+[![Test](https://github.com/ranjithrajv/awesome-enhancer/actions/workflows/bun.yml/badge.svg)](https://github.com/ranjithrajv/awesome-enhancer/actions/workflows/bun.yml)
+[![Release](https://github.com/ranjithrajv/awesome-enhancer/actions/workflows/release.yml/badge.svg)](https://github.com/ranjithrajv/awesome-enhancer/actions/workflows/release.yml)
 [![npm](https://img.shields.io/npm/v/awesome-enhancer.svg)](https://www.npmjs.com/package/awesome-enhancer)
 [![npm](https://img.shields.io/npm/dm/awesome-enhancer.svg)](https://www.npmjs.com/package/awesome-enhancer)
 [![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=flat-square)](https://github.com/ranjithrajv/awesome-enhancer)
+
+**Cross-Platform Support:** 🐧 Linux | 🍎 macOS | 🪟 Windows
 
 ## 🎯 Quick Start
 
