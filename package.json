@@ -1,6 +1,6 @@
 {
   "name": "awesome-enhancer",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "CLI tool to automatically enhance awesome lists with metadata and improved descriptions",
   "repository": {
