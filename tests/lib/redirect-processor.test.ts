@@ -5,7 +5,11 @@ import { BadgeGenerator } from '../../src/lib/badge-generator.js';
 import type { LinkNode } from '../../src/lib/processor-engine.js';
 import axios from 'axios';
 
-vi.mock('axios');
+vi.mock('axios', () => ({
+  default: {
+    head: vi.fn(),
+  },
+}));
 
 function createLinkNode(url: string): LinkNode {
   return { type: 'link', url, children: [{ type: 'text', value: 'Link' }] } as LinkNode;
