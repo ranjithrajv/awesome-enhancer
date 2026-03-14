@@ -2,6 +2,61 @@
 
 > CLI tool to automatically enhance awesome lists with metadata and improved descriptions
 
+[![npm](https://img.shields.io/npm/v/awesome-enhancer.svg)](https://www.npmjs.com/package/awesome-enhancer)
+[![npm](https://img.shields.io/npm/dm/awesome-enhancer.svg)](https://www.npmjs.com/package/awesome-enhancer)
+[![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=flat-square)](https://github.com/ranjithrajv/awesome-enhancer)
+
+## 🎯 Quick Start
+
+```bash
+# Try it now (requires Bun for development)
+bunx awesome-enhancer README.md --add-metadata
+
+# Or install globally
+npm install -g awesome-enhancer
+
+# Then use anywhere
+awesome-enhancer README.md --add-metadata
+```
+
+> **Note:** For development, use `bun run dev` or install globally. After npm publish, `npx awesome-enhancer` will work without installation.
+
+## ✨ Visual Example
+
+**Before:**
+
+```markdown
+- [axios](https://github.com/axios/axios) - Promise based HTTP client
+- [node-fetch](https://github.com/node-fetch/node-fetch) - A light-weight module
+```
+
+**After (with `--add-metadata --detect-stale`):**
+
+```markdown
+- [axios](https://github.com/axios/axios) (⭐ 110k) - Promise based HTTP client for browser and Node.js ![TypeScript](https://img.shields.io/github/languages/top/axios/axios)
+- [node-fetch](https://github.com/node-fetch/node-fetch) (⭐ 8.5k) - A light-weight module that brings window.fetch to Node.js ![JavaScript](https://img.shields.io/github/languages/top/node-fetch/node-fetch)
+```
+
+**Enhancement Summary:**
+
+- ⭐ **Metadata added**: Stars, forks, language badges
+- 📝 **Improved descriptions**: More context and clarity
+- 🔍 **Stale detection**: Identifies archived/deleted repos
+- 🔀 **Redirect detection**: Finds renamed/transferred repos
+
+## Installation
+
+```bash
+# Install globally (recommended)
+npm install -g awesome-enhancer
+
+# Or via Bun
+bun install -g awesome-enhancer
+
+# Try without installation (after npm publish)
+npx awesome-enhancer README.md --add-metadata
+```
+
 ## Features
 
 - 📊 **Metadata Extraction** - Automatically add GitHub/GitLab stats (stars, forks, language)
@@ -13,17 +68,32 @@
 - 🖥️ **Interactive TUI** - Guided prompts for option selection
 - ⚡ **Fast** - Built with Bun, cached API calls
 
-## Installation
+## CLI Usage
+
+### One-Command Enhancement (Recommended)
 
 ```bash
-# Global
-npm install -g awesome-enhancer
+# Enhance with metadata
+awesome-enhancer README.md --add-metadata
 
-# Or via Bun
-bun install -g awesome-enhancer
+# Enhance with metadata and stale detection
+awesome-enhancer README.md --add-metadata --detect-stale
+
+# Preview changes before applying
+awesome-enhancer README.md --add-metadata --dry-run
+
+# Save to a different file
+awesome-enhancer README.md --add-metadata --output enhanced.md
 ```
 
-## CLI Usage
+### Interactive Mode
+
+```bash
+# Run with guided prompts
+awesome-enhancer
+```
+
+### With Flags (Non-Interactive)
 
 ```bash
 # Interactive mode (with prompts)
@@ -129,6 +199,30 @@ Add to `claude_desktop_config.json`:
 ## Configuration
 
 Set `GITHUB_TOKEN` or `GITLAB_TOKEN` env vars for higher rate limits.
+
+## 🏷️ Add Badge to Your Awesome List
+
+Show that your list is enhanced with awesome-enhancer:
+
+```markdown
+[![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=flat-square)](https://github.com/ranjithrajv/awesome-enhancer)
+```
+
+**Other badge styles:**
+
+```markdown
+<!-- Flat style -->
+
+[![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=flat)](https://github.com/ranjithrajv/awesome-enhancer)
+
+<!-- For the badge style -->
+
+[![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue)](https://github.com/ranjithrajv/awesome-enhancer)
+
+<!-- Social style -->
+
+[![Enhanced with awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=social)](https://github.com/ranjithrajv/awesome-enhancer)
+```
 
 ## License
 

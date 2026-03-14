@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { Spinner } from './spinner.js';
 import { Progress } from './progress.js';
+import { BeforeAfter, StatsDisplay } from './before-after.js';
 
 export interface EnhanceState {
   stage: 'idle' | 'reading' | 'fetching' | 'linting' | 'enhancing' | 'saving' | 'done' | 'error';
@@ -10,6 +11,14 @@ export interface EnhanceState {
   file?: string;
   output?: string;
   error?: string;
+  before?: string;
+  after?: string;
+  enhancements?: {
+    linksProcessed: number;
+    metadataAdded: number;
+    descriptionsImproved: number;
+    staleDetected: number;
+  };
 }
 
 interface EnhanceUIProps {
@@ -46,6 +55,19 @@ export const EnhanceUI: React.FC<EnhanceUIProps> = ({ state }) => {
                 📄 Output written to: <Text bold>{state.output}</Text>
               </Text>
             )}
+            {state.before && state.after && (
+              <BeforeAfter before={state.before} after={state.after} title="Preview:" />
+            )}
+            {state.enhancements && <StatsDisplay enhancements={state.enhancements} />}
+            <Box flexDirection="column" marginTop={1}>
+              <Text bold color="cyan">
+                💡 Tip: Add this badge to your README:
+              </Text>
+              <Text color="gray">
+                [![Enhanced with
+                awesome-enhancer](https://img.shields.io/badge/enhanced%20with-awesome--enhancer-blue?style=flat-square)](https://github.com/ranjithrajv/awesome-enhancer)
+              </Text>
+            </Box>
           </Box>
         );
       case 'error':

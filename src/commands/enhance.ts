@@ -11,7 +11,28 @@ import { isValidUrl, parseGitHubUrl, parseGitLabUrl } from '../core/utils.js';
 import { GitHubService } from '../services/github.js';
 import { GitLabService } from '../services/gitlab.js';
 import { GitService } from '../services/git.js';
+import type { StaleEntry } from '../lib/stale-processor.js';
+import type { RedirectEntry } from '../lib/redirect-processor.js';
 import type { AppError } from '../core/errors.js';
+
+function printEnhancementResults(result: {
+  staleEntries: StaleEntry[];
+  redirectEntries: RedirectEntry[];
+}): void {
+  if (result.staleEntries.length > 0) {
+    console.log('\n⚠️  Stale entries detected:');
+    for (const entry of result.staleEntries) {
+      console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
+    }
+  }
+
+  if (result.redirectEntries.length > 0) {
+    console.log('\n🔀 Redirects detected:');
+    for (const entry of result.redirectEntries) {
+      console.log(`   • ${entry.name}  → ${entry.newUrl}  [${entry.reason}]`);
+    }
+  }
+}
 
 export interface EnhanceCommandOptions {
   addMetadata?: boolean;
@@ -130,42 +151,16 @@ export async function enhanceCommand(
       console.log(enhanced);
       console.log('─'.repeat(80));
 
-      // Print stale entries if any
-      if (result.staleEntries.length > 0) {
-        console.log('\n⚠️  Stale entries detected:');
-        for (const entry of result.staleEntries) {
-          console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
-        }
-      }
-
-      // Print redirect entries if any
-      if (result.redirectEntries.length > 0) {
-        console.log('\n🔀 Redirects detected:');
-        for (const entry of result.redirectEntries) {
-          console.log(`   • ${entry.name}  → ${entry.newUrl}  [${entry.reason}]`);
-        }
-      }
+      // Print results
+      printEnhancementResults(result);
 
       console.log('\n✅ Dry-run complete. No files were modified.');
     } else {
       yield* Effect.promise(() => writeFile(outputFile, enhanced, 'utf-8'));
       console.log(`\n✅ Successfully enhanced! Output written to: ${outputFile}`);
 
-      // Print stale entries if any
-      if (result.staleEntries.length > 0) {
-        console.log('\n⚠️  Stale entries detected:');
-        for (const entry of result.staleEntries) {
-          console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
-        }
-      }
-
-      // Print redirect entries if any
-      if (result.redirectEntries.length > 0) {
-        console.log('\n🔀 Redirects detected:');
-        for (const entry of result.redirectEntries) {
-          console.log(`   • ${entry.name}  → ${entry.newUrl}  [${entry.reason}]`);
-        }
-      }
+      // Print results
+      printEnhancementResults(result);
     }
 
     if (!options.skipLint && !options.dryRun) {

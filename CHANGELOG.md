@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.5.0] - 2026-03-14
+
+### Added
+
+- **Visual Before/After UI**: New `BeforeAfter` component showing side-by-side comparison of content before and after enhancement in the TUI.
+- **Enhancement Statistics**: `StatsDisplay` component displaying enhancement metrics (links processed, metadata added, descriptions improved, stale repos detected).
+- **ASCII Art Banner**: Professional CLI banner displayed across all interactive screens for improved branding.
+- **Badge Generator**: Added badge suggestions at the end of enhancement process, encouraging users to add "Enhanced with awesome-enhancer" badge to their READMEs.
+- **Enhanced Help Text**: Updated `--help` output with ASCII banner and npx usage examples.
+- **README Visual Example**: Added before/after visual comparison in README showing transformation results.
+- **Quick Start Section**: Added prominent quick start guide with installation and usage examples.
+- **Badge Documentation**: Added badge generator section with multiple style options (flat-square, flat, social).
+- **New UI Component**: `src/ui/before-after.tsx` - Reusable components for visual comparisons and statistics display.
+
+### Changed
+
+- **Enhanced TUI Completion Screen**: Updated `EnhanceUI` component to show before/after preview and enhancement statistics when available.
+- **Interactive Screens**: All interactive screens (Welcome, Options, Mode, InputPrompt) now display the ASCII art banner for consistent branding.
+- **README Structure**: Reorganized README with visual example at the top for immediate impact.
+- **Package Configuration**: Added `preferGlobal: true` to package.json for better npm global installation experience.
+
+### Technical
+
+- **New Component**: `BeforeAfter` - Side-by-side visual comparison component for Ink TUI.
+- **New Component**: `StatsDisplay` - Statistics display showing enhancement metrics.
+- **New Function**: `getAsciiBanner()` - Returns formatted ASCII art banner.
+- **Enhanced State**: Extended `EnhanceState` interface with `before`, `after`, and `enhancements` fields for visual feedback.
+
 ## [0.4.0] - 2026-03-14
 
 ### Added

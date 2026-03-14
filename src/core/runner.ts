@@ -31,6 +31,28 @@ export interface EnhanceResult {
   }>;
 }
 
+function buildEnhanceResult(
+  result: {
+    content: string;
+    staleEntries: EnhanceResult['stale_entries'];
+    redirectEntries: EnhanceResult['redirect_entries'];
+  },
+  outputPath: string,
+  dryRun: boolean,
+): EnhanceResult {
+  const base = {
+    success: true,
+    stale_entries: result.staleEntries,
+    redirect_entries: result.redirectEntries,
+  };
+
+  if (dryRun) {
+    return { ...base, dry_run: true, preview: result.content };
+  }
+
+  return { ...base, output_file: outputPath, enhanced_content: result.content };
+}
+
 export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<EnhanceResult> {
   const options = EnhanceOptionsSchema.parse({
     addMetadata: args.add_metadata,
@@ -47,24 +69,7 @@ export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<Enhan
 
   const outputPath = args.output_path || args.file_path;
 
-  if (args.dry_run) {
-    return {
-      success: true,
-      dry_run: true,
-      preview: result.content,
-      stale_entries: result.staleEntries,
-      redirect_entries: result.redirectEntries,
-    };
-  }
-
-  await writeFile(outputPath, result.content, 'utf-8');
-  return {
-    success: true,
-    output_file: outputPath,
-    enhanced_content: result.content,
-    stale_entries: result.staleEntries,
-    redirect_entries: result.redirectEntries,
-  };
+  return buildEnhanceResult(result, outputPath, args.dry_run ?? false);
 }
 
 export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<EnhanceResult> {
@@ -90,24 +95,7 @@ export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<Enh
   const engine = createEngine(options);
   const result = await Effect.runPromise(engine.process(content).pipe(Effect.provide(layer)));
 
-  if (args.dry_run) {
-    return {
-      success: true,
-      dry_run: true,
-      preview: result.content,
-      stale_entries: result.staleEntries,
-      redirect_entries: result.redirectEntries,
-    };
-  }
-
-  await writeFile(outputPath, result.content, 'utf-8');
-  return {
-    success: true,
-    output_file: outputPath,
-    enhanced_content: result.content,
-    stale_entries: result.staleEntries,
-    redirect_entries: result.redirectEntries,
-  };
+  return buildEnhanceResult(result, outputPath, args.dry_run ?? false);
 }
 
 export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<EnhanceResult> {
@@ -131,24 +119,12 @@ export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<Enh
   );
 
   const engine = createEngine(options);
-  const gitlabResult = await Effect.runPromise(engine.process(content).pipe(Effect.provide(layer)));
+  const result = await Effect.runPromise(engine.process(content).pipe(Effect.provide(layer)));
 
   if (args.dry_run) {
-    return {
-      success: true,
-      dry_run: true,
-      preview: gitlabResult.content,
-      stale_entries: gitlabResult.staleEntries,
-      redirect_entries: gitlabResult.redirectEntries,
-    };
+    return buildEnhanceResult(result, outputPath, true);
   }
 
-  await writeFile(outputPath, gitlabResult.content, 'utf-8');
-  return {
-    success: true,
-    output_file: outputPath,
-    enhanced_content: gitlabResult.content,
-    stale_entries: gitlabResult.staleEntries,
-    redirect_entries: gitlabResult.redirectEntries,
-  };
+  await writeFile(outputPath, result.content, 'utf-8');
+  return buildEnhanceResult(result, outputPath, false);
 }

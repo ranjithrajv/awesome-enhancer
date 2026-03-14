@@ -23,6 +23,7 @@
     "LICENSE",
     "CHANGELOG.md"
   ],
+  "preferGlobal": true,
   "scripts": {
     "dev": "bun run bin/cli.tsx",
     "dev:server": "bun run bin/http-server.ts",

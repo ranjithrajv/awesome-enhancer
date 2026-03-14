@@ -8,6 +8,7 @@ import { enhanceCommand } from '../src/commands/enhance.js';
 import { EnhanceUI } from '../src/ui/enhance-ui.js';
 import { EnhanceState } from '../src/ui/enhance-ui.js';
 import { GitService } from '../src/services/git.js';
+import { getAsciiBanner } from '../src/ui/before-after.js';
 
 interface CliOptions {
   addMetadata?: boolean;
@@ -59,7 +60,7 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
 
 function printHelp() {
   console.log(`
-🚀 awesome-enhancer v0.1.0
+${getAsciiBanner()}
 
 CLI tool to enhance awesome lists with metadata and descriptions
 
@@ -81,10 +82,10 @@ Options:
   --version, -v            Show version number
 
 Examples:
-  awesome-enhancer README.md --add-metadata
-  awesome-enhancer https://github.com/user/awesome-list --update-descriptions
-  awesome-enhancer README.md --add-metadata --update-descriptions --dry-run
-  awesome-enhancer README.md --detect-stale
+  npx awesome-enhancer README.md --add-metadata
+  npx awesome-enhancer https://github.com/user/awesome-list --update-descriptions
+  npx awesome-enhancer README.md --add-metadata --update-descriptions --dry-run
+  npx awesome-enhancer README.md --detect-stale
 `);
 }
 
@@ -140,8 +141,9 @@ const InputPrompt: React.FC<{
   return (
     <Box flexDirection="column">
       <Text bold color="cyan">
-        🚀 {type === 'url' ? 'Enter GitHub URL' : 'Enter file path'}
+        {getAsciiBanner()}
       </Text>
+      <Text color="gray">{'─'.repeat(40)}</Text>
       <Text color="gray">{'─'.repeat(40)}</Text>
       <Text>
         {type === 'url' ? '🌐  GitHub URL: ' : '📄  File path: '}
@@ -158,8 +160,10 @@ const InputPrompt: React.FC<{
 const WelcomeScreen: React.FC<{ onSelect: (value: string) => void }> = ({ onSelect }) => (
   <Box flexDirection="column">
     <Text bold color="cyan">
-      🚀 awesome-enhancer
+      {getAsciiBanner()}
     </Text>
+    <Text color="gray">{'─'.repeat(40)}</Text>
+    <Text color="yellow">Try: npx awesome-enhancer README.md --add-metadata</Text>
     <Text color="gray">{'─'.repeat(40)}</Text>
     <Text>What would you like to enhance?</Text>
     <SelectInput items={WELCOME_ITEMS} onSelect={(item) => onSelect(item.value as string)} />
@@ -176,7 +180,7 @@ const OptionsScreen: React.FC<{
   return (
     <Box flexDirection="column">
       <Text bold color="cyan">
-        🚀 Choose Enhancement Options
+        {getAsciiBanner()}
       </Text>
       <Text color="gray">{'─'.repeat(40)}</Text>
       <SelectInput items={items} onSelect={(item) => onSelect(item.value as string)} />
@@ -188,7 +192,7 @@ const OptionsScreen: React.FC<{
 const ModeScreen: React.FC<{ onSelect: (value: string) => void }> = ({ onSelect }) => (
   <Box flexDirection="column">
     <Text bold color="cyan">
-      🚀 Choose Output Mode
+      {getAsciiBanner()}
     </Text>
     <Text color="gray">{'─'.repeat(40)}</Text>
     <SelectInput items={MODE_ITEMS} onSelect={(item) => onSelect(item.value as string)} />
