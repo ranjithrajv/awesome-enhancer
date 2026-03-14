@@ -28,16 +28,21 @@
     "dev": "bun run bin/cli.tsx",
     "dev:server": "bun run bin/http-server.ts",
     "dev:mcp": "bun run bin/mcp-server.ts",
-    "build": "bun run clean && rolldown -c rolldown.config.ts && bun run build:types",
-    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build": "bun run clean && bun run build:lib && bun run build:cli && bun run build:mcp && bun run build:server",
+    "build:lib": "vite build --config vite.config.ts",
+    "build:cli": "vite build --config vite.config.cli.ts",
+    "build:mcp": "vite build --config vite.config.mcp.ts",
+    "build:server": "vite build --config vite.config.server.ts",
     "clean": "rm -rf dist",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test": "vp test run",
+    "test:watch": "vp test",
+    "test:coverage": "vp test run --coverage",
     "test:e2e": "bun run bin/cli.tsx tests/sample-awesome.md --dry-run --add-metadata",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings",
+    "lint": "vp lint",
+    "lint:manual": "oxlint --deny-warnings",
     "format": "prettier --write .",
+    "format:manual": "prettier --write .",
     "check-version": "node -e \"const p=require('./package.json');const v=p.version;const t=require('child_process').execSync('git describe --tags --abbrev=0',{encoding:'utf8'}).trim().replace('v','');if(v!==t)console.error('Version mismatch: package.json='+v+', git tag='+t)&&process.exit(1);console.log('Version OK:'+v)\"",
     "prepare": "husky",
     "prepublishOnly": "bun run check-version && bun run build"
@@ -97,6 +102,8 @@
     "rolldown": "^1.0.0-rc.1",
     "size-limit": "^12.0.1",
     "typescript": "^5.9.3",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plus": "^0.1.11",
     "vitest": "^4.0.18"
   },
   "size-limit": [
@@ -108,5 +115,6 @@
       "path": "dist/bin/cli.js",
       "limit": "100 kB"
     }
-  ]
+  ],
+  "packageManager": "npm@11.11.1"
 }

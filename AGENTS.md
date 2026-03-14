@@ -7,45 +7,60 @@
 
 ## Build System
 
-- **Bundler**: Rolldown (configured via `rolldown.config.ts`)
-- **Tests**: Vitest (`vitest.config.ts`)
-- **Linting**: Oxlint
+- **Bundler**: Vite (with vite-plugin-dts for type generation)
+- **Tests**: Vitest (via Vite+ `vp test`)
+- **Linting**: Oxlint (via Vite+ `vp lint`)
 - **Formatting**: Prettier
 - **Package Manager**: Bun (uses `bun.lock`)
+- **Toolchain**: Vite+ unified CLI (`vp` command)
 
 ## Current Commands
 
-- `dev`: `bun run bin/cli.tsx`
-- `build`: `bun run clean && rolldown -c rolldown.config.ts && bun run build:types`
-- `test`: `vitest run`
-- `lint`: `oxlint --deny-warnings --ignore-pattern dist`
-- `format`: `prettier --write .`
+- `dev`: `bun run bin/cli.tsx` - Run CLI in development mode
+- `dev:server`: `bun run bin/http-server.ts` - Run HTTP server
+- `dev:mcp`: `bun run bin/mcp-server.ts` - Run MCP server
+- `build`: `bun run build` - Build library and all binaries
+  - `build:lib`: Build core library to `dist/src/`
+  - `build:cli`: Build CLI binary to `dist/bin/cli.js`
+  - `build:mcp`: Build MCP server to `dist/bin/mcp-server.js`
+  - `build:server`: Build HTTP server to `dist/bin/http-server.js`
+- `test`: `vp test run` - Run tests via Vite+
+- `test:watch`: `vp test` - Run tests in watch mode
+- `test:coverage`: `vp test run --coverage` - Run tests with coverage
+- `lint`: `vp lint` - Lint via Vite+ (Oxlint)
+- `format`: `prettier --write .` - Format code
+
+## Vite+ Configuration
+
+- `vite.config.ts` - Core library build config
+- `vite.config.cli.ts` - CLI binary build config
+- `vite.config.mcp.ts` - MCP server build config
+- `vite.config.server.ts` - HTTP server build config
 
 ## Project Structure
 
-- `bin/`: CLI entry points
+- `bin/`: CLI entry points (cli.tsx, mcp-server.ts, http-server.ts)
 - `src/`: Source code
+  - `core/`: Core logic (engine, schemas, errors, utils)
+  - `lib/`: Processors (metadata, description, stale, redirect)
+  - `services/`: External services (GitHub, GitLab, Scraper, Cache)
+  - `ui/`: React/Ink UI components
+  - `commands/`: CLI commands
+  - `types/`: TypeScript types
 - `tests/`: Test files
 - `dist/`: Build output
 
 ## Key Dependencies
 
 - React/Ink for CLI UI
-- Commander for CLI parsing
-- Remark/Unified for Markdown processing
+- Effect for functional error handling
 - Zod for validation
-
-## Vite+ Evaluation Notes
-
-- Current build uses Rolldown (which Vite+ also uses)
-- Already using Oxlint for linting
-- Already using Vitest for testing
-- Vite+ could unify these tools into a single CLI (`vp dev`, `vp build`, `vp test`, `vp lint`, `vp format`)
-- Potential benefits: standardized commands, faster builds, unified configuration
-- Project is a CLI tool, not a web app, so Vite+ web features may not apply
+- Remark/Unified for Markdown processing
+- Vite+ for unified tooling (build, test, lint)
 
 ## Useful Scripts
 
 - `bun run dev`: Run the CLI in development
 - `bun run test:e2e`: Run end-to-end test
 - `bun run typecheck`: Type checking with TypeScript
+- `bun run check-version`: Verify package version matches git tag
