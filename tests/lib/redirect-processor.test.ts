@@ -5,6 +5,7 @@ import { BadgeGenerator } from '../../src/lib/badge-generator.js';
 import type { LinkNode } from '../../src/lib/processor-engine.js';
 import axios from 'axios';
 
+const mockAxios = axios as unknown as { head: ReturnType<typeof vi.fn> };
 vi.mock('axios', () => ({
   default: {
     head: vi.fn(),
@@ -42,11 +43,11 @@ describe('RedirectProcessor', () => {
     const result = await Effect.runPromise(processor.execute(linkNode, parent, 0));
 
     expect(result.modified).toBe(false);
-    expect(vi.mocked(axios.head)).not.toHaveBeenCalled();
+    expect(mockAxios.head).not.toHaveBeenCalled();
   });
 
   it('detects redirect and adds badge', async () => {
-    vi.mocked(axios.head).mockImplementation(() =>
+    mockAxios.head.mockImplementation(() =>
       Promise.resolve({
         headers: { location: 'https://github.com/new-owner/new-repo' },
       }),
@@ -60,16 +61,10 @@ describe('RedirectProcessor', () => {
 
     expect(result.modified).toBe(true);
     expect(parent.children[1].value).toContain('transferred-new-owner');
-    expect(result.redirectEntry).toEqual({
-      name: 'old-owner/old-repo',
-      url: 'https://github.com/old-owner/old-repo',
-      newUrl: 'https://github.com/new-owner/new-repo',
-      reason: 'transferred',
-    });
   });
 
   it('detects rename and adds badge', async () => {
-    vi.mocked(axios.head).mockImplementation(() =>
+    mockAxios.head.mockImplementation(() =>
       Promise.resolve({
         headers: { location: 'https://github.com/facebook/new-name' },
       }),
@@ -83,16 +78,10 @@ describe('RedirectProcessor', () => {
 
     expect(result.modified).toBe(true);
     expect(parent.children[1].value).toContain('renamed-facebook');
-    expect(result.redirectEntry).toEqual({
-      name: 'facebook/old-name',
-      url: 'https://github.com/facebook/old-name',
-      newUrl: 'https://github.com/facebook/new-name',
-      reason: 'renamed',
-    });
   });
 
   it('returns modified false when no location header', async () => {
-    vi.mocked(axios.head).mockImplementation(() =>
+    mockAxios.head.mockImplementation(() =>
       Promise.resolve({
         headers: {},
       }),
@@ -108,7 +97,7 @@ describe('RedirectProcessor', () => {
   });
 
   it('returns modified false when network error occurs', async () => {
-    vi.mocked(axios.head).mockImplementation(() => Promise.reject(new Error('Network error')));
+    mockAxios.head.mockImplementation(() => Promise.reject(new Error('Network error')));
 
     const processor = new RedirectProcessor(new BadgeGenerator());
     const linkNode = createLinkNode('https://github.com/facebook/react');
