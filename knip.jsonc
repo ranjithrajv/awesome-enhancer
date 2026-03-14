@@ -1,6 +1,6 @@
 {
   "vitest": {
-    "config": ["vitest.config.ts"]
+    "config": ["vitest.config.ts"],
   },
   "ignore": [
     "packages/core/src/ui/index.ts",
