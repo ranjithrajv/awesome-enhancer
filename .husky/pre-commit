@@ -1,1 +1,44 @@
-bun run check-version && bun run test && bun run typecheck && bun run lint && bun run build && bun run format --check && bunx knip --exclude dependencies,unlisted && bunx size-limit
+#!/usr/bin/env bash
+set -e
+
+# Pre-commit hook that mirrors GitHub Actions CI checks
+# This ensures all CI checks pass before committing
+
+echo "🔍 Running pre-commit checks (mirroring GitHub Actions CI)..."
+echo ""
+
+# 1. Version check (release requirement)
+echo "✓ Checking version consistency..."
+bun run check-version
+
+# 2. Tests (CI: bun.yml)
+echo "✓ Running tests..."
+bun run test
+
+# 3. Type checking (CI: bun.yml, release.yml)
+echo "✓ Running typecheck..."
+bun run typecheck
+
+# 4. Linting (CI: bun.yml, release.yml)
+echo "✓ Running lint..."
+bun run lint
+
+# 5. Build (CI: bun.yml, release.yml)
+echo "✓ Running build..."
+bun run build
+
+# 6. Formatting check (CI: implicit in code quality)
+echo "✓ Checking formatting..."
+bun run format --check
+
+# 7. Dead code/unused exports check (CI: code quality)
+echo "✓ Checking for unused code (knip)..."
+bunx knip --exclude dependencies,unlisted
+
+# 8. Size limits (CI: build artifact validation)
+echo "✓ Checking bundle size limits..."
+bunx size-limit
+
+echo ""
+echo "✅ All pre-commit checks passed!"
+echo "🚀 Ready to commit!"
