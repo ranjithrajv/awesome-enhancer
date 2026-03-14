@@ -35,7 +35,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "bun run bin/cli.tsx tests/sample-awesome.md --dry-run --add-metadata",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings --ignore-pattern dist",
+    "lint": "oxlint --deny-warnings",
     "format": "prettier --write .",
     "prepare": "husky",
     "prepublishOnly": "bun run build"
