@@ -32,7 +32,7 @@ jobs:
         run: vp test run
 
       - name: Run typecheck
-        run: bun run typecheck
+        run: bun --filter='@awesome-enhancer/*' typecheck
 
       - name: Run lint
         run: vp lint

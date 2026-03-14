@@ -1,119 +1,35 @@
 {
-  "name": "awesome-enhancer",
+  "name": "awesome-enhancer-monorepo",
   "version": "0.4.0",
+  "private": true,
   "type": "module",
-  "description": "CLI tool to automatically enhance awesome lists with metadata and improved descriptions",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ranjithrajv/awesome-enhancer.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ranjithrajv/awesome-enhancer/issues?q=state%3Aopen+label%3Abug"
-  },
-  "homepage": "https://github.com/ranjithrajv/awesome-enhancer#readme",
-  "main": "dist/src/index.js",
-  "bin": {
-    "awesome-enhancer": "dist/bin/cli.js",
-    "awesome-enhancer-mcp": "dist/bin/mcp-server.js",
-    "awesome-enhancer-server": "dist/bin/http-server.js"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
+  "workspaces": [
+    "packages/*"
   ],
-  "preferGlobal": true,
   "scripts": {
-    "dev": "bun run bin/cli.tsx",
-    "dev:server": "bun run bin/http-server.ts",
-    "dev:mcp": "bun run bin/mcp-server.ts",
-    "build": "bun run clean && bun run build:lib && bun run build:cli && bun run build:mcp && bun run build:server",
-    "build:lib": "vite build --config vite.config.ts",
-    "build:cli": "vite build --config vite.config.cli.ts",
-    "build:mcp": "vite build --config vite.config.mcp.ts",
-    "build:server": "vite build --config vite.config.server.ts",
-    "clean": "rm -rf dist",
+    "dev": "bun run --filter='@awesome-enhancer/cli' dev",
+    "dev:server": "bun run --filter='@awesome-enhancer/http-server' dev",
+    "dev:mcp": "bun run --filter='@awesome-enhancer/mcp-server' dev",
+    "build": "bun run --filter='@awesome-enhancer/*' build",
     "test": "vp test run",
     "test:watch": "vp test",
     "test:coverage": "vp test run --coverage",
-    "test:e2e": "bun run bin/cli.tsx tests/sample-awesome.md --dry-run --add-metadata",
-    "typecheck": "tsc --noEmit",
     "lint": "vp lint",
-    "lint:manual": "oxlint --deny-warnings",
+    "lint:all": "bun run --filter='@awesome-enhancer/*' lint",
     "format": "prettier --write .",
-    "format:manual": "prettier --write .",
-    "check-version": "node -e \"const p=require('./package.json');const v=p.version;const t=require('child_process').execSync('git describe --tags --abbrev=0',{encoding:'utf8'}).trim().replace('v','');if(v!==t)console.error('Version mismatch: package.json='+v+', git tag='+t)&&process.exit(1);console.log('Version OK:'+v)\"",
-    "prepare": "husky",
-    "prepublishOnly": "bun run check-version && bun run build"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "oxlint --deny-warnings --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
-  },
-  "keywords": [
-    "awesome",
-    "awesome-list",
-    "cli",
-    "markdown",
-    "metadata",
-    "github",
-    "mcp",
-    "ai-agent",
-    "volunteer-computing"
-  ],
-  "author": "Ranjith Raj <ranjithraj@riseup.net>",
-  "license": "AGPL-3.0-or-later",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "awesome-lint": "^2.2.3",
-    "axios": "^1.13.3",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.2.3",
-    "effect": "^3.19.19",
-    "ink": "^6.8.0",
-    "ink-select-input": "^6.2.0",
-    "react": "^19.2.4",
-    "remark": "^15.0.0",
-    "remark-parse": "^11.0.0",
-    "remark-stringify": "^11.0.0",
-    "unified": "^11.0.0",
-    "unist-util-visit": "^5.0.0",
-    "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.25.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "typecheck": "bun run --filter='@awesome-enhancer/*' typecheck",
+    "clean": "bun run --filter='@awesome-enhancer/*' clean",
+    "clean:all": "bun run clean && rm -rf node_modules packages/*/node_modules"
   },
   "devDependencies": {
-    "@size-limit/preset-app": "^12.0.1",
     "@types/node": "^25.0.10",
-    "@types/react": "^19.2.14",
     "@vitest/coverage-v8": "^4.0.18",
-    "husky": "^9.1.7",
-    "knip": "^5.82.1",
     "oxlint": "^1.41.0",
     "prettier": "^3.8.1",
-    "size-limit": "^12.0.1",
     "typescript": "^5.9.3",
-    "vite-plugin-dts": "^4.5.4",
+    "vite": "latest",
     "vite-plus": "^0.1.11",
-    "vitest": "^4.0.18"
-  },
-  "size-limit": [
-    {
-      "path": "dist/src/index.js",
-      "limit": "2 MB"
-    },
-    {
-      "path": "dist/bin/cli.js",
-      "limit": "100 kB"
-    }
-  ],
-  "packageManager": "npm@11.11.1"
+    "vite-plugin-dts": "latest",
+    "vitest": "latest"
+  }
 }

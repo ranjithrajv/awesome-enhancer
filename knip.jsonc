@@ -1,10 +1,12 @@
 {
+  "vitest": {
+    "config": ["vitest.config.ts"]
+  },
   "ignore": [
-    "src/ui/index.ts",
-    "vite.config.ts",
-    "vite.config.cli.ts",
-    "vite.config.mcp.ts",
-    "vite.config.server.ts",
+    "packages/core/src/ui/index.ts",
+    "packages/*/vite.config.ts",
+    "vitest.workspace.ts",
+    "vitest.config.ts",
   ],
   "ignoreExportsUsedInFile": true,
 }

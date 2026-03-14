@@ -6,8 +6,8 @@ import {
   HttpEnhanceLocalSchema,
   HttpEnhanceGithubSchema,
   HttpEnhanceGitLabSchema,
-} from '../src/core/schemas.js';
-import { runEnhanceLocal, runEnhanceGithub, runEnhanceGitLab } from '../src/core/runner.js';
+} from '@awesome-enhancer/core';
+import { runEnhanceLocal, runEnhanceGithub, runEnhanceGitLab } from '@awesome-enhancer/core';
 
 const DEFAULT_PORT = 9867;
 

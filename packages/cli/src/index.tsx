@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { render } from 'ink';
 import { Box, Text } from 'ink';
 import SelectInput from 'ink-select-input';
-import { enhanceCommand } from '../src/commands/enhance.js';
-import { EnhanceUI } from '../src/ui/enhance-ui.js';
-import { EnhanceState } from '../src/ui/enhance-ui.js';
-import { GitService } from '../src/services/git.js';
-import { getAsciiBanner } from '../src/ui/before-after.js';
+import { enhanceCommand } from './commands/enhance.js';
+import { EnhanceUI } from './ui/enhance-ui.js';
+import { EnhanceState } from './ui/enhance-ui.js';
+import { GitService } from './services/git.js';
+import { getAsciiBanner } from './ui/before-after.js';
 
 interface CliOptions {
   addMetadata?: boolean;

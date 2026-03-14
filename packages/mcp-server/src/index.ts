@@ -2,8 +2,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { HttpEnhanceLocalSchema, HttpEnhanceGithubSchema } from '../src/core/schemas.js';
-import { runEnhanceLocal, runEnhanceGithub } from '../src/core/runner.js';
+import { HttpEnhanceLocalSchema, HttpEnhanceGithubSchema } from '@awesome-enhancer/core';
+import { runEnhanceLocal, runEnhanceGithub } from '@awesome-enhancer/core';
 
 const server = new Server(
   { name: 'awesome-enhancer', version: '0.1.0' },

@@ -1,0 +1,34 @@
+{
+  "name": "@awesome-enhancer/mcp-server",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "MCP server for awesome list enhancement",
+  "bin": {
+    "awesome-enhancer-mcp": "./bin/mcp-server.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "bun run src/index.ts",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@awesome-enhancer/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

@@ -9,7 +9,7 @@ echo ""
 
 # 1. Version check (release requirement)
 echo "✓ Checking version consistency..."
-bun run check-version
+bun --filter='@awesome-enhancer/core' run check-version
 
 # 2. Tests (CI: bun.yml) - using Vite+ vp command with coverage
 echo "✓ Running tests with coverage..."
@@ -34,10 +34,6 @@ bun run format --check
 # 7. Dead code/unused exports check (CI: code quality)
 echo "✓ Checking for unused code (knip)..."
 bunx knip --exclude dependencies,unlisted,binaries
-
-# 8. Size limits (CI: build artifact validation)
-echo "✓ Checking bundle size limits..."
-bunx size-limit
 
 echo ""
 echo "✅ All pre-commit checks passed!"

@@ -2,18 +2,20 @@ import { readFile, writeFile } from 'fs/promises';
 import { createInterface } from 'readline/promises';
 import awesomeLint from 'awesome-lint';
 import { Effect, Layer } from 'effect';
-import { loadConfig } from '../core/config.js';
-import { createEngine } from '../core/engine-factory.js';
-import { buildAppLayer } from '../core/app-layer.js';
-import { EnhanceOptionsSchema } from '../core/schemas.js';
-import { ConsoleLive } from '../services/logger.js';
-import { isValidUrl, parseGitHubUrl, parseGitLabUrl } from '../core/utils.js';
-import { GitHubService } from '../services/github.js';
-import { GitLabService } from '../services/gitlab.js';
+import {
+  loadConfig,
+  createEngine,
+  buildAppLayer,
+  EnhanceOptionsSchema,
+  ConsoleLive,
+  isValidUrl,
+  parseGitHubUrl,
+  parseGitLabUrl,
+  GitHubService,
+  GitLabService,
+} from '@awesome-enhancer/core';
 import { GitService } from '../services/git.js';
-import type { StaleEntry } from '../lib/stale-processor.js';
-import type { RedirectEntry } from '../lib/redirect-processor.js';
-import type { AppError } from '../core/errors.js';
+import type { StaleEntry, RedirectEntry, AppError } from '@awesome-enhancer/core';
 
 function printEnhancementResults(result: {
   staleEntries: StaleEntry[];

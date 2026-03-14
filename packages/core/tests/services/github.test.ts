@@ -226,4 +226,17 @@ describe('GitHubService', () => {
       runGitHub(Effect.flatMap(GitHubService, (s) => s.fetchRepoReadme('owner', 'repo'))),
     ).rejects.toMatchObject({ _tag: 'NetworkError' });
   });
+
+  it('handles metadata fetch without rate limit header (covers ?? null branch)', async () => {
+    const mockMetadata = { stargazers_count: 0, forks_count: 0, language: null };
+    (axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: mockMetadata,
+      headers: {},
+    });
+
+    const result = await runGitHub(
+      Effect.flatMap(GitHubService, (s) => s.fetchRepoMetadata('owner', 'repo')),
+    );
+    expect(result).toEqual(mockMetadata);
+  });
 });

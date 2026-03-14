@@ -1,0 +1,38 @@
+{
+  "name": "@awesome-enhancer/cli",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "CLI tool for awesome list enhancement",
+  "bin": {
+    "awesome-enhancer": "./bin/cli.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "bun run src/index.tsx",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@awesome-enhancer/core": "workspace:*",
+    "awesome-lint": "^2.2.3",
+    "effect": "^3.19.19",
+    "ink": "^6.8.0",
+    "ink-select-input": "^6.2.0",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/react": "^19.2.14",
+    "typescript": "^5.9.3",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

@@ -1,0 +1,54 @@
+{
+  "name": "@awesome-enhancer/core",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "Core library for awesome list enhancement",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --mode development",
+    "test": "vitest run",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "check-version": "node -e \"const p=require('./package.json');const v=p.version;const t=require('child_process').execSync('git describe --tags --abbrev=0',{encoding:'utf8'}).trim().replace('v','');if(v!==t)console.error('Version mismatch: package.json='+v+', git tag='+t)&&process.exit(1);console.log('Version OK:'+v)\""
+  },
+  "dependencies": {
+    "awesome-lint": "^2.2.3",
+    "axios": "^1.13.3",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.2.3",
+    "effect": "^3.19.19",
+    "remark": "^15.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.0",
+    "unist-util-visit": "^5.0.0",
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/unist": "^3.0.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.9.3",
+    "vite": "latest",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

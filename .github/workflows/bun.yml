@@ -3,16 +3,22 @@ name: Bun CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - 'docs/**'
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'vitest*.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - 'docs/**'
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'vitest*.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/**'
 
 jobs:
   test:
@@ -42,7 +48,7 @@ jobs:
         run: vp test run
 
       - name: Run typecheck
-        run: bun run typecheck
+        run: bun --filter='@awesome-enhancer/*' typecheck
 
       - name: Upload coverage artifacts
         if: matrix.os == 'ubuntu-latest'

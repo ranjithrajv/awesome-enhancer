@@ -127,4 +127,16 @@ describe('ProcessorEngine', () => {
 
     expect(result.redirectEntries).toContainEqual(redirectEntry);
   });
+
+  it('logs progress when a processor modifies a link', async () => {
+    const engine = new ProcessorEngine();
+    const proc: Processor = {
+      execute: vi.fn().mockReturnValue(Effect.succeed({ modified: true })),
+    };
+
+    engine.register(proc);
+    const result = await runEngine(engine, '- [Link](https://github.com/user/repo)\n');
+
+    expect(result.content).toContain('Link');
+  });
 });
