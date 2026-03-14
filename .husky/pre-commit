@@ -11,19 +11,19 @@ echo ""
 echo "✓ Checking version consistency..."
 bun run check-version
 
-# 2. Tests (CI: bun.yml)
+# 2. Tests (CI: bun.yml) - using Vite+ vp command
 echo "✓ Running tests..."
-bun run test
+vp test run
 
 # 3. Type checking (CI: bun.yml, release.yml)
 echo "✓ Running typecheck..."
 bun run typecheck
 
-# 4. Linting (CI: bun.yml, release.yml)
+# 4. Linting (CI: bun.yml, release.yml) - using Vite+ vp command
 echo "✓ Running lint..."
-bun run lint
+vp lint
 
-# 5. Build (CI: bun.yml, release.yml)
+# 5. Build (CI: bun.yml, release.yml) - using Vite+ vite build
 echo "✓ Running build..."
 bun run build
 
@@ -33,7 +33,7 @@ bun run format --check
 
 # 7. Dead code/unused exports check (CI: code quality)
 echo "✓ Checking for unused code (knip)..."
-bunx knip --exclude dependencies,unlisted
+bunx knip --exclude dependencies,unlisted,binaries
 
 # 8. Size limits (CI: build artifact validation)
 echo "✓ Checking bundle size limits..."

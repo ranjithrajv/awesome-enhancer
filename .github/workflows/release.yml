@@ -29,13 +29,13 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: bun run test
+        run: vp test run
 
       - name: Run typecheck
         run: bun run typecheck
 
       - name: Run lint
-        run: bun run lint
+        run: vp lint
 
       - name: Build
         run: bun run build

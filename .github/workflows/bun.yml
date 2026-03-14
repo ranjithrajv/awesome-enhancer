@@ -39,7 +39,7 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: bun run test
+        run: vp test run
 
       - name: Run typecheck
         run: bun run typecheck
@@ -71,7 +71,7 @@ jobs:
         run: bun install
 
       - name: Run lint
-        run: bun run lint
+        run: vp lint
 
   build:
     name: Build

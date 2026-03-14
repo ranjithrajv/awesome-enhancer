@@ -1,4 +1,5 @@
 {
-  "ignore": ["src/ui/index.ts", "rolldown.config.ts"],
+  "ignore": ["src/ui/index.ts", "vite.config.ts", "vite.config.cli.ts", "vite.config.mcp.ts", "vite.config.server.ts"],
   "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["vite", "vp"],
 }
