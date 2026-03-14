@@ -91,9 +91,7 @@ describe('ScraperService', () => {
       });
 
       const result = await runScraper(
-        Effect.flatMap(ScraperService, (s) =>
-          s.fetchWebsiteDescription('https://example.com'),
-        ),
+        Effect.flatMap(ScraperService, (s) => s.fetchWebsiteDescription('https://example.com')),
       );
       expect(Option.isSome(result)).toBe(true);
       expect(Option.getOrNull(result)).toBe('My site');

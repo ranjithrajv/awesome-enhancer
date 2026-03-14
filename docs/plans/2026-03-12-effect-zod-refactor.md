@@ -21,38 +21,41 @@ Effect is a functional effects library. Key concepts you need:
 // - requires services R from the environment
 
 // Create effects
-const ok = Effect.succeed(42)                    // Effect<number, never, never>
-const fail = Effect.fail(new MyError())          // Effect<never, MyError, never>
+const ok = Effect.succeed(42); // Effect<number, never, never>
+const fail = Effect.fail(new MyError()); // Effect<never, MyError, never>
 const fromPromise = Effect.tryPromise({
   try: () => axios.get(url),
-  catch: (e) => new NetworkError({ message: String(e) })
-})                                               // Effect<AxiosResponse, NetworkError, never>
+  catch: (e) => new NetworkError({ message: String(e) }),
+}); // Effect<AxiosResponse, NetworkError, never>
 
 // Compose with Effect.gen (like async/await)
 const program = Effect.gen(function* () {
-  const a = yield* Effect.succeed(1)
-  const b = yield* Effect.succeed(2)
-  return a + b
-})
+  const a = yield* Effect.succeed(1);
+  const b = yield* Effect.succeed(2);
+  return a + b;
+});
 
 // Services via Context.Tag
-class MyService extends Context.Tag('MyService')<MyService, { greet: () => Effect.Effect<string> }>() {}
+class MyService extends Context.Tag('MyService')<
+  MyService,
+  { greet: () => Effect.Effect<string> }
+>() {}
 const useService = Effect.gen(function* () {
-  const svc = yield* MyService       // yields the service from environment
-  return yield* svc.greet()
-})
+  const svc = yield* MyService; // yields the service from environment
+  return yield* svc.greet();
+});
 
 // Layers provide services
-const MyLive = Layer.succeed(MyService, { greet: () => Effect.succeed('hello') })
+const MyLive = Layer.succeed(MyService, { greet: () => Effect.succeed('hello') });
 
 // Provide layer and run
-await Effect.runPromise(useService.pipe(Effect.provide(MyLive)))
+await Effect.runPromise(useService.pipe(Effect.provide(MyLive)));
 
 // Option.Option<T> replaces T | null
-Option.none()           // absence
-Option.some(value)      // presence
-Option.isNone(o)        // true if None
-Option.fromNullable(x)  // null/undefined → None, else Some
+Option.none(); // absence
+Option.some(value); // presence
+Option.isNone(o); // true if None
+Option.fromNullable(x); // null/undefined → None, else Some
 ```
 
 ---
@@ -60,6 +63,7 @@ Option.fromNullable(x)  // null/undefined → None, else Some
 ## Task 1: Install Dependencies
 
 **Files:**
+
 - Modify: `package.json`
 
 **Step 1: Install packages**
@@ -88,6 +92,7 @@ git commit -m "feat: add effect, zod, zod-to-json-schema dependencies"
 ## Task 2: Constants Module
 
 **Files:**
+
 - Create: `src/core/constants.ts`
 - Modify: `src/core/config.ts` (line 14)
 - Modify: `src/services/base-service.ts` (lines 17, 26)
@@ -111,18 +116,23 @@ export const DESCRIPTION_MAX_LENGTH = 200;
 **Step 2: Update `src/core/config.ts` line 14**
 
 Replace:
+
 ```typescript
   cacheTTL: 86400, // 24 hours
 ```
+
 With:
+
 ```typescript
   cacheTTL: DEFAULT_CACHE_TTL,
 ```
+
 Add import at top: `import { DEFAULT_CACHE_TTL } from './constants.js';`
 
 **Step 3: Update `src/services/base-service.ts`**
 
 Replace the constructor signature and literals:
+
 ```typescript
 // line 17: replace cacheTTL: number = 86400 with:
 constructor(serviceName: string, cacheTTL: number = DEFAULT_CACHE_TTL) {
@@ -131,6 +141,7 @@ constructor(serviceName: string, cacheTTL: number = DEFAULT_CACHE_TTL) {
 // line 26: replace timeout: number = 10000 with:
   timeout: number = DEFAULT_REQUEST_TIMEOUT,
 ```
+
 Add import: `import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_REQUEST_TIMEOUT } from '../core/constants.js';`
 
 **Step 4: Update `src/services/github.ts` line 7**
@@ -138,6 +149,7 @@ Add import: `import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_REQUEST_TIME
 ```typescript
 constructor(githubToken: string | null = null, cacheTTL: number = DEFAULT_CACHE_TTL) {
 ```
+
 Add import: `import { DEFAULT_CACHE_TTL } from '../core/constants.js';`
 
 **Step 5: Update `src/services/scraper.ts` line 6 and line 51**
@@ -148,13 +160,15 @@ constructor(cacheTTL: number = DEFAULT_CACHE_TTL) {
     if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
       cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
 ```
+
 Add import: `import { DEFAULT_CACHE_TTL, DESCRIPTION_MAX_LENGTH } from '../core/constants.js';`
 
 **Step 6: Update `src/lib/description-processor.ts` line 25**
 
 ```typescript
-    if (currentText.length > DESCRIPTION_MIN_LENGTH) return false;
+if (currentText.length > DESCRIPTION_MIN_LENGTH) return false;
 ```
+
 Add import: `import { DESCRIPTION_MIN_LENGTH } from '../core/constants.js';`
 
 **Step 7: Run tests**
@@ -177,6 +191,7 @@ git commit -m "feat: extract magic numbers to constants module"
 ## Task 3: Zod Schemas
 
 **Files:**
+
 - Create: `src/core/schemas.ts`
 - Create: `tests/core/schemas.test.ts`
 
@@ -261,11 +276,7 @@ Expected: FAIL — "Cannot find module '../../src/core/schemas.js'"
 
 ```typescript
 import { z } from 'zod';
-import {
-  DEFAULT_CACHE_TTL,
-  DEFAULT_CACHE_DIR,
-  DEFAULT_BADGE_STYLE,
-} from './constants.js';
+import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_BADGE_STYLE } from './constants.js';
 
 export const ConfigSchema = z.object({
   githubToken: z.string().optional(),
@@ -363,6 +374,7 @@ git commit -m "feat: add Zod schemas for all external inputs"
 ## Task 4: Typed Errors
 
 **Files:**
+
 - Create: `src/core/errors.ts`
 - Create: `tests/core/errors.test.ts`
 
@@ -385,7 +397,11 @@ describe('NetworkError', () => {
   });
 
   it('includes statusCode when provided', () => {
-    const e = new NetworkError({ url: 'https://example.com', message: 'not found', statusCode: 404 });
+    const e = new NetworkError({
+      url: 'https://example.com',
+      message: 'not found',
+      statusCode: 404,
+    });
     expect(e.statusCode).toBe(404);
   });
 
@@ -482,6 +498,7 @@ git commit -m "feat: add Effect Data.TaggedError typed error hierarchy"
 ## Task 5: Logger Service
 
 **Files:**
+
 - Create: `src/services/logger.ts`
 - Create: `tests/services/logger.test.ts`
 
@@ -621,6 +638,7 @@ git commit -m "feat: add LoggerService Effect Context.Tag with Console and Silen
 ## Task 6: CacheService Layer
 
 **Files:**
+
 - Create: `src/services/cache.ts`
 - Create: `tests/services/cache.test.ts`
 
@@ -751,6 +769,7 @@ git commit -m "feat: add CacheService Effect Layer wrapping existing Cache"
 ## Task 7: GitHubService Effect Migration
 
 **Files:**
+
 - Modify: `src/services/github.ts`
 - Modify: `tests/services/github.test.ts`
 
@@ -779,9 +798,7 @@ const NoCacheLayer = Layer.succeed(CacheService, {
 });
 
 const TestLayer = (token: string | null = null) =>
-  GitHubLive(token).pipe(
-    Layer.provide(Layer.merge(NoCacheLayer, SilentLive)),
-  );
+  GitHubLive(token).pipe(Layer.provide(Layer.merge(NoCacheLayer, SilentLive)));
 
 const runGitHub = <A>(effect: Effect.Effect<A, any, GitHubService>, token: string | null = null) =>
   Effect.runPromise(effect.pipe(Effect.provide(TestLayer(token))));
@@ -846,9 +863,7 @@ describe('GitHubService', () => {
   });
 
   it('getRateLimitStatus returns None initially', async () => {
-    const result = await runGitHub(
-      Effect.flatMap(GitHubService, (s) => s.getRateLimitStatus()),
-    );
+    const result = await runGitHub(Effect.flatMap(GitHubService, (s) => s.getRateLimitStatus()));
     expect(Option.isNone(result)).toBe(true);
   });
 });
@@ -911,12 +926,18 @@ export const GitHubLive = (
 
           const response = yield* Effect.tryPromise({
             try: () =>
-              axios.get<T>(url, { headers: { ...headers, 'User-Agent': 'awesome-enhancer-github' }, timeout: DEFAULT_REQUEST_TIMEOUT }),
+              axios.get<T>(url, {
+                headers: { ...headers, 'User-Agent': 'awesome-enhancer-github' },
+                timeout: DEFAULT_REQUEST_TIMEOUT,
+              }),
             catch: (e: any) =>
               new NetworkError({ url, statusCode: e.response?.status, message: e.message }),
           });
 
-          yield* cache.set(url, { data: response.data, headers: response.headers as Record<string, string> });
+          yield* cache.set(url, {
+            data: response.data,
+            headers: response.headers as Record<string, string>,
+          });
           return response.data;
         });
       }
@@ -925,7 +946,10 @@ export const GitHubLive = (
         fetchRepoMetadata: (owner, repo) => {
           const url = `https://api.github.com/repos/${owner}/${repo}`;
           return Effect.gen(function* () {
-            const cached = yield* cache.get<{ data: RepoMetadata; headers: Record<string, string> }>(url);
+            const cached = yield* cache.get<{
+              data: RepoMetadata;
+              headers: Record<string, string>;
+            }>(url);
             if (Option.isSome(cached)) {
               return cached.value.data;
             }
@@ -938,8 +962,14 @@ export const GitHubLive = (
               catch: (e: any) =>
                 new NetworkError({ url, statusCode: e.response?.status, message: e.message }),
             });
-            yield* Ref.set(rateLimitRef, Option.fromNullable(response.headers['x-ratelimit-remaining'] ?? null));
-            yield* cache.set(url, { data: response.data, headers: response.headers as Record<string, string> });
+            yield* Ref.set(
+              rateLimitRef,
+              Option.fromNullable(response.headers['x-ratelimit-remaining'] ?? null),
+            );
+            yield* cache.set(url, {
+              data: response.data,
+              headers: response.headers as Record<string, string>,
+            });
             return response.data;
           });
         },
@@ -948,7 +978,9 @@ export const GitHubLive = (
           const url = `https://api.github.com/repos/${owner}/${repo}/readme`;
           const headers = { ...authHeaders(), Accept: 'application/vnd.github.v3.raw' };
           return fetchWithCache<string>(url, headers).pipe(
-            Effect.tapError((e) => logger.warn(`⚠️ [GitHubService] Failed to fetch ${url}: ${e.message}`)),
+            Effect.tapError((e) =>
+              logger.warn(`⚠️ [GitHubService] Failed to fetch ${url}: ${e.message}`),
+            ),
           );
         },
 
@@ -986,6 +1018,7 @@ git commit -m "feat: migrate GitHubService to Effect Context.Tag with typed Netw
 ## Task 8: ScraperService Effect Migration
 
 **Files:**
+
 - Modify: `src/services/scraper.ts`
 - Modify: `tests/services/scraper.test.ts`
 
@@ -1076,9 +1109,7 @@ describe('ScraperService', () => {
       });
 
       const result = await runScraper(
-        Effect.flatMap(ScraperService, (s) =>
-          s.fetchWebsiteDescription('https://example.com'),
-        ),
+        Effect.flatMap(ScraperService, (s) => s.fetchWebsiteDescription('https://example.com')),
       );
       expect(Option.isSome(result)).toBe(true);
       expect(Option.getOrNull(result)).toBe('My site');
@@ -1125,81 +1156,84 @@ export class ScraperService extends Context.Tag('ScraperService')<
   }
 >() {}
 
-export const ScraperLive: Layer.Layer<
-  ScraperService,
-  never,
-  CacheService | LoggerService
-> = Layer.effect(
-  ScraperService,
-  Effect.gen(function* () {
-    const cache = yield* CacheService;
-    const logger = yield* LoggerService;
+export const ScraperLive: Layer.Layer<ScraperService, never, CacheService | LoggerService> =
+  Layer.effect(
+    ScraperService,
+    Effect.gen(function* () {
+      const cache = yield* CacheService;
+      const logger = yield* LoggerService;
 
-    function fetchHtml(url: string) {
-      return Effect.gen(function* () {
-        const cached = yield* cache.get<string>(url);
-        if (Option.isSome(cached)) return cached.value;
+      function fetchHtml(url: string) {
+        return Effect.gen(function* () {
+          const cached = yield* cache.get<string>(url);
+          if (Option.isSome(cached)) return cached.value;
 
-        const response = yield* Effect.tryPromise({
-          try: () =>
-            axios.get<string>(url, {
-              headers: { 'User-Agent': 'awesome-enhancer-scraper' },
-              timeout: DEFAULT_REQUEST_TIMEOUT,
-            }),
-          catch: (e: any) =>
-            new NetworkError({ url, statusCode: e.response?.status, message: e.message }),
-        });
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              axios.get<string>(url, {
+                headers: { 'User-Agent': 'awesome-enhancer-scraper' },
+                timeout: DEFAULT_REQUEST_TIMEOUT,
+              }),
+            catch: (e: any) =>
+              new NetworkError({ url, statusCode: e.response?.status, message: e.message }),
+          });
 
-        yield* cache.set(url, response.data);
-        return response.data;
-      }).pipe(
-        Effect.tapError((e) =>
-          logger.warn(`⚠️ [ScraperService] Failed to fetch ${url}: ${e.message}`),
-        ),
-      );
-    }
-
-    function cleanDescription(description: string | undefined): Option.Option<string> {
-      if (!description) return Option.none();
-      let cleaned = description.replace(/^GitHub - [^:]+:\s*/, '').replace(/\s+/g, ' ').trim();
-      if (!cleaned) return Option.none();
-      if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
-        cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
+          yield* cache.set(url, response.data);
+          return response.data;
+        }).pipe(
+          Effect.tapError((e) =>
+            logger.warn(`⚠️ [ScraperService] Failed to fetch ${url}: ${e.message}`),
+          ),
+        );
       }
-      return Option.some(cleaned);
-    }
 
-    return {
-      fetchGitHubDescription: (owner, repo) => {
-        const url = `https://github.com/${owner}/${repo}`;
-        return fetchHtml(url).pipe(
-          Effect.map((html) => {
-            const $ = cheerio.load(html);
-            let description = $('meta[property="og:description"]').attr('content');
-            if (!description || description.length < 10) {
-              description = $('[data-pjax="#repo-content-pjax-container"] p').first().text().trim();
-            }
-            return cleanDescription(description);
-          }),
-        );
-      },
+      function cleanDescription(description: string | undefined): Option.Option<string> {
+        if (!description) return Option.none();
+        let cleaned = description
+          .replace(/^GitHub - [^:]+:\s*/, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!cleaned) return Option.none();
+        if (cleaned.length > DESCRIPTION_MAX_LENGTH) {
+          cleaned = cleaned.substring(0, DESCRIPTION_MAX_LENGTH - 3) + '...';
+        }
+        return Option.some(cleaned);
+      }
 
-      fetchWebsiteDescription: (url) => {
-        if (!isValidUrl(url)) return Effect.succeed(Option.none());
-        return fetchHtml(url).pipe(
-          Effect.map((html) => {
-            const $ = cheerio.load(html);
-            const description =
-              $('meta[name="description"]').attr('content') ||
-              $('meta[property="og:description"]').attr('content') ||
-              $('meta[name="twitter:description"]').attr('content');
-            return cleanDescription(description);
-          }),
-        );
-      },
-    };
-  }),
-);
+      return {
+        fetchGitHubDescription: (owner, repo) => {
+          const url = `https://github.com/${owner}/${repo}`;
+          return fetchHtml(url).pipe(
+            Effect.map((html) => {
+              const $ = cheerio.load(html);
+              let description = $('meta[property="og:description"]').attr('content');
+              if (!description || description.length < 10) {
+                description = $('[data-pjax="#repo-content-pjax-container"] p')
+                  .first()
+                  .text()
+                  .trim();
+              }
+              return cleanDescription(description);
+            }),
+          );
+        },
+
+        fetchWebsiteDescription: (url) => {
+          if (!isValidUrl(url)) return Effect.succeed(Option.none());
+          return fetchHtml(url).pipe(
+            Effect.map((html) => {
+              const $ = cheerio.load(html);
+              const description =
+                $('meta[name="description"]').attr('content') ||
+                $('meta[property="og:description"]').attr('content') ||
+                $('meta[name="twitter:description"]').attr('content');
+              return cleanDescription(description);
+            }),
+          );
+        },
+      };
+    }),
+  );
 ```
 
 **Step 4: Run test to verify it passes**
@@ -1230,6 +1264,7 @@ git commit -m "feat: migrate ScraperService to Effect Context.Tag with Option re
 ## Task 9: Delete BaseService
 
 **Files:**
+
 - Delete: `src/services/base-service.ts`
 
 `BaseService` is now fully replaced by `CacheService` + `LoggerService` layers. Both `GitHubService` and `ScraperService` no longer extend it.
@@ -1268,6 +1303,7 @@ git commit -m "refactor: delete BaseService, fully replaced by Effect Layers"
 ## Task 10: ProcessorEngine Effect Migration
 
 **Files:**
+
 - Modify: `src/lib/processor-engine.ts`
 - Modify: `tests/lib/processor-engine.test.ts`
 
@@ -1334,12 +1370,18 @@ describe('ProcessorEngine', () => {
 
     const proc1: Processor = {
       execute: vi.fn().mockImplementation(() =>
-        Effect.sync(() => { order.push('proc1'); return false; }),
+        Effect.sync(() => {
+          order.push('proc1');
+          return false;
+        }),
       ),
     };
     const proc2: Processor = {
       execute: vi.fn().mockImplementation(() =>
-        Effect.sync(() => { order.push('proc2'); return false; }),
+        Effect.sync(() => {
+          order.push('proc2');
+          return false;
+        }),
       ),
     };
 
@@ -1357,7 +1399,10 @@ describe('ProcessorEngine', () => {
 
     const proc: Processor = {
       execute: vi.fn().mockImplementation((linkNode: LinkNode) =>
-        Effect.sync(() => { capturedUrl = linkNode.url; return false; }),
+        Effect.sync(() => {
+          capturedUrl = linkNode.url;
+          return false;
+        }),
       ),
     };
 
@@ -1419,55 +1464,61 @@ export class ProcessorEngine {
     EnhanceError | NetworkError,
     LoggerService | GitHubService | ScraperService
   > {
-    return Effect.gen((function* (this: ProcessorEngine) {
-      const logger = yield* LoggerService;
-      const tree = unified().use(remarkParse).parse(content);
+    return Effect.gen(
+      function* (this: ProcessorEngine) {
+        const logger = yield* LoggerService;
+        const tree = unified().use(remarkParse).parse(content);
 
-      let totalLinks = 0;
-      visit(tree, 'link', () => { totalLinks++; });
+        let totalLinks = 0;
+        visit(tree, 'link', () => {
+          totalLinks++;
+        });
 
-      const processedRef = yield* Ref.make(0);
-      const modifiedRef = yield* Ref.make(0);
+        const processedRef = yield* Ref.make(0);
+        const modifiedRef = yield* Ref.make(0);
 
-      const linkEffects: Effect.Effect<void, NetworkError, GitHubService | ScraperService>[] = [];
+        const linkEffects: Effect.Effect<void, NetworkError, GitHubService | ScraperService>[] = [];
 
-      visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
-        if (index === undefined) return;
+        visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
+          if (index === undefined) return;
 
-        linkEffects.push(
-          Effect.gen(function* () {
-            let modified = false;
-            for (const processor of this.processors) {
-              const result = yield* processor.execute(linkNode as LinkNode, parent, index);
-              if (result) modified = true;
-            }
-            const processed = yield* Ref.updateAndGet(processedRef, (n) => n + 1);
-            if (modified) yield* Ref.update(modifiedRef, (n) => n + 1);
-            const modifiedCount = yield* Ref.get(modifiedRef);
-            if (modifiedCount > 0) {
-              yield* logger.log(
-                `\r✨ Processed ${processed}/${totalLinks} links, enhanced ${modifiedCount}...`,
-              );
-            }
-          }.bind(this)),
-        );
-      });
+          linkEffects.push(
+            Effect.gen(
+              function* () {
+                let modified = false;
+                for (const processor of this.processors) {
+                  const result = yield* processor.execute(linkNode as LinkNode, parent, index);
+                  if (result) modified = true;
+                }
+                const processed = yield* Ref.updateAndGet(processedRef, (n) => n + 1);
+                if (modified) yield* Ref.update(modifiedRef, (n) => n + 1);
+                const modifiedCount = yield* Ref.get(modifiedRef);
+                if (modifiedCount > 0) {
+                  yield* logger.log(
+                    `\r✨ Processed ${processed}/${totalLinks} links, enhanced ${modifiedCount}...`,
+                  );
+                }
+              }.bind(this),
+            ),
+          );
+        });
 
-      yield* Effect.all(linkEffects, { concurrency: 'unbounded' });
+        yield* Effect.all(linkEffects, { concurrency: 'unbounded' });
 
-      const processed = yield* Ref.get(processedRef);
-      const modified = yield* Ref.get(modifiedRef);
-      yield* logger.log(`\n✅ Finished: ${processed} links analyzed, ${modified} enhanced.`);
+        const processed = yield* Ref.get(processedRef);
+        const modified = yield* Ref.get(modifiedRef);
+        yield* logger.log(`\n✅ Finished: ${processed} links analyzed, ${modified} enhanced.`);
 
-      return unified()
-        .use(remarkStringify, {
-          bullet: '-',
-          emphasis: '_',
-          strong: '*',
-          listItemIndent: 'one',
-        })
-        .stringify(tree as any);
-    }).bind(this)());
+        return unified()
+          .use(remarkStringify, {
+            bullet: '-',
+            emphasis: '_',
+            strong: '*',
+            listItemIndent: 'one',
+          })
+          .stringify(tree as any);
+      }.bind(this)(),
+    );
   }
 }
 ```
@@ -1500,6 +1551,7 @@ git commit -m "feat: migrate ProcessorEngine.process() to return Effect with Log
 ## Task 11: MetadataProcessor Effect Migration
 
 **Files:**
+
 - Modify: `src/lib/metadata-processor.ts`
 - Modify: `tests/lib/metadata-processor.test.ts`
 
@@ -1533,7 +1585,13 @@ function createParent(linkNode: LinkNode, trailingText = ' - Description') {
   return { children: [linkNode, { type: 'text', value: trailingText }] };
 }
 
-function runProcessor(processor: MetadataProcessor, linkNode: LinkNode, parent: any, index: number, metadata: any = { stargazers_count: 100 }) {
+function runProcessor(
+  processor: MetadataProcessor,
+  linkNode: LinkNode,
+  parent: any,
+  index: number,
+  metadata: any = { stargazers_count: 100 },
+) {
   return Effect.runPromise(
     processor.execute(linkNode, parent, index).pipe(Effect.provide(makeGitHubLayer(metadata))),
   );
@@ -1621,33 +1679,43 @@ export class MetadataProcessor implements Processor {
     parent: any,
     index: number,
   ): Effect.Effect<boolean, NetworkError, GitHubService> {
-    return Effect.gen((function* (this: MetadataProcessor) {
-      const url = linkNode.url;
-      const githubInfo = parseGitHubUrl(url);
-      if (!githubInfo) return false;
+    return Effect.gen(
+      function* (this: MetadataProcessor) {
+        const url = linkNode.url;
+        const githubInfo = parseGitHubUrl(url);
+        if (!githubInfo) return false;
 
-      if (index + 1 >= parent.children.length) {
-        const newTextNode = { type: 'text', value: '' };
-        parent.children.splice(index + 1, 0, newTextNode);
-      }
+        if (index + 1 >= parent.children.length) {
+          const newTextNode = { type: 'text', value: '' };
+          parent.children.splice(index + 1, 0, newTextNode);
+        }
 
-      const nextNode = parent.children[index + 1];
-      if (nextNode.type !== 'text') return false;
-      if (nextNode.value.includes('img.shields.io')) return false;
+        const nextNode = parent.children[index + 1];
+        if (nextNode.type !== 'text') return false;
+        if (nextNode.value.includes('img.shields.io')) return false;
 
-      const github = yield* GitHubService;
-      const metadata = yield* github
-        .fetchRepoMetadata(githubInfo.owner, githubInfo.repo)
-        .pipe(Effect.option); // NetworkError → Option.None instead of failure
+        const github = yield* GitHubService;
+        const metadata = yield* github
+          .fetchRepoMetadata(githubInfo.owner, githubInfo.repo)
+          .pipe(Effect.option); // NetworkError → Option.None instead of failure
 
-      if (Option.isNone(metadata)) return false;
+        if (Option.isNone(metadata)) return false;
 
-      const starsBadge = this.badgeGenerator.generateBadge('stars', githubInfo.owner, githubInfo.repo);
-      const langBadge = this.badgeGenerator.generateBadge('language', githubInfo.owner, githubInfo.repo);
+        const starsBadge = this.badgeGenerator.generateBadge(
+          'stars',
+          githubInfo.owner,
+          githubInfo.repo,
+        );
+        const langBadge = this.badgeGenerator.generateBadge(
+          'language',
+          githubInfo.owner,
+          githubInfo.repo,
+        );
 
-      nextNode.value = `${nextNode.value} ${starsBadge} ${langBadge}`;
-      return true;
-    }).bind(this)());
+        nextNode.value = `${nextNode.value} ${starsBadge} ${langBadge}`;
+        return true;
+      }.bind(this)(),
+    );
   }
 }
 ```
@@ -1680,6 +1748,7 @@ git commit -m "feat: migrate MetadataProcessor.execute() to return Effect, yield
 ## Task 12: DescriptionProcessor Effect Migration
 
 **Files:**
+
 - Modify: `src/lib/description-processor.ts`
 - Modify: `tests/lib/description-processor.test.ts`
 
@@ -1774,9 +1843,7 @@ describe('DescriptionProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await Effect.runPromise(
-      processor
-        .execute(linkNode, parent, 0)
-        .pipe(Effect.provide(makeScraperErrorLayer())),
+      processor.execute(linkNode, parent, 0).pipe(Effect.provide(makeScraperErrorLayer())),
     );
     expect(result).toBe(false);
   });
@@ -1868,6 +1935,7 @@ git commit -m "feat: migrate DescriptionProcessor.execute() to return Effect, yi
 ## Task 13: Engine Factory
 
 **Files:**
+
 - Create: `src/core/engine-factory.ts`
 - Create: `tests/core/engine-factory.test.ts`
 
@@ -1938,7 +2006,9 @@ export function createEngine(config: EngineConfig): ProcessorEngine {
   const engine = new ProcessorEngine();
 
   if (config.addMetadata) {
-    engine.register(new MetadataProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE)));
+    engine.register(
+      new MetadataProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE)),
+    );
   }
 
   if (config.updateDescriptions) {
@@ -1977,6 +2047,7 @@ git commit -m "feat: add engine-factory to deduplicate processor registration"
 ## Task 14: App Layer
 
 **Files:**
+
 - Create: `src/core/app-layer.ts`
 - Create: `tests/core/app-layer.test.ts`
 
@@ -2099,9 +2170,7 @@ export function buildAppLayer(
     Layer.provide(Layer.merge(cacheLayer, loggerLayer)),
   );
 
-  const scraperLayer = ScraperLive.pipe(
-    Layer.provide(Layer.merge(cacheLayer, loggerLayer)),
-  );
+  const scraperLayer = ScraperLive.pipe(Layer.provide(Layer.merge(cacheLayer, loggerLayer)));
 
   return Layer.mergeAll(githubLayer, scraperLayer, loggerLayer, cacheLayer);
 }
@@ -2135,6 +2204,7 @@ git commit -m "feat: add buildAppLayer to assemble full Effect Layer from option
 ## Task 15: Public API (`src/index.ts`)
 
 **Files:**
+
 - Modify: `src/index.ts`
 - Create: `tests/index.test.ts`
 
@@ -2188,9 +2258,7 @@ describe('enhance()', () => {
     });
 
     const content = '# Test\n\n- [Repo](https://github.com/user/repo) - A repo\n';
-    const result = await Effect.runPromise(
-      enhance(content, { addMetadata: true }),
-    );
+    const result = await Effect.runPromise(enhance(content, { addMetadata: true }));
     expect(result).toContain('img.shields.io');
   });
 
@@ -2277,6 +2345,7 @@ git commit -m "feat: enhance() returns Effect<string, AppError, never>, add full
 ## Task 16: Shared Runner Module
 
 **Files:**
+
 - Create: `src/core/runner.ts`
 - Create: `tests/core/runner.test.ts`
 
@@ -2386,7 +2455,11 @@ Expected: FAIL — "Cannot find module"
 import { readFile, writeFile } from 'fs/promises';
 import { Effect } from 'effect';
 import { enhanceCommand } from '../commands/enhance.js';
-import { EnhanceOptionsSchema, type HttpEnhanceLocalArgs, type HttpEnhanceGithubArgs } from './schemas.js';
+import {
+  EnhanceOptionsSchema,
+  type HttpEnhanceLocalArgs,
+  type HttpEnhanceGithubArgs,
+} from './schemas.js';
 
 export interface EnhanceResult {
   success: boolean;
@@ -2472,6 +2545,7 @@ git commit -m "feat: add shared runner module, eliminating temp-dir duplication 
 ## Task 17: Update `src/commands/enhance.ts`
 
 **Files:**
+
 - Modify: `src/commands/enhance.ts`
 
 No tests (excluded from coverage — it's in `commands/`).
@@ -2532,7 +2606,9 @@ export async function enhanceCommand(
     }
 
     if (!options.addMetadata && !options.updateDescriptions) {
-      throw new Error('Please specify at least one enhancement option: --add-metadata or --update-descriptions');
+      throw new Error(
+        'Please specify at least one enhancement option: --add-metadata or --update-descriptions',
+      );
     }
 
     const config = yield* Effect.promise(() => loadConfig());
@@ -2556,7 +2632,11 @@ export async function enhanceCommand(
 
     if (!options.skipLint) {
       console.log('\n🔍 Running initial awesome-lint check...');
-      try { await (awesomeLint as any).report({ filename: fileOrUrl }); } catch { /* ignore */ }
+      try {
+        await(awesomeLint as any).report({ filename: fileOrUrl });
+      } catch {
+        /* ignore */
+      }
     }
 
     const parsed = EnhanceOptionsSchema.parse({
@@ -2587,7 +2667,7 @@ export async function enhanceCommand(
     if (!options.skipLint && !options.dryRun) {
       console.log('\n🔍 Running awesome-lint to check for further improvements...');
       try {
-        await (awesomeLint as any).report({ filename: outputFile });
+        await(awesomeLint as any).report({ filename: outputFile });
         console.log('\n✅ Thank you for maintaining an awesome list!');
       } catch {
         console.warn('\n⚠️ Note: awesome-lint found some issues.');
@@ -2608,11 +2688,13 @@ export async function enhanceCommand(
   // Override logger with ConsoleLive for CLI context
   const cliLayer = appLayer.pipe(Layer.provide(ConsoleLive));
 
-  await Effect.runPromise(program.pipe(Effect.provide(cliLayer))).catch((error: AppError | Error) => {
-    console.error(`\n❌ Error: ${error.message}`);
-    if (process.env.DEBUG) console.error((error as Error).stack);
-    process.exit(1);
-  });
+  await Effect.runPromise(program.pipe(Effect.provide(cliLayer))).catch(
+    (error: AppError | Error) => {
+      console.error(`\n❌ Error: ${error.message}`);
+      if (process.env.DEBUG) console.error((error as Error).stack);
+      process.exit(1);
+    },
+  );
 }
 ```
 
@@ -2644,6 +2726,7 @@ git commit -m "feat: enhanceCommand uses Effect.runPromise at CLI boundary with 
 ## Task 18: Update `bin/http-server.ts`
 
 **Files:**
+
 - Modify: `bin/http-server.ts`
 
 No unit tests for HTTP server.
@@ -2655,10 +2738,7 @@ No unit tests for HTTP server.
 
 import http from 'http';
 import { ZodError } from 'zod';
-import {
-  HttpEnhanceLocalSchema,
-  HttpEnhanceGithubSchema,
-} from '../src/core/schemas.js';
+import { HttpEnhanceLocalSchema, HttpEnhanceGithubSchema } from '../src/core/schemas.js';
 import { runEnhanceLocal, runEnhanceGithub } from '../src/core/runner.js';
 
 const DEFAULT_PORT = 9867;
@@ -2677,10 +2757,15 @@ function sendJson(res: http.ServerResponse, statusCode: number, data: object) {
 function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('data', (chunk: Buffer) => {
+      body += chunk.toString();
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(body)); }
-      catch (e) { reject(e); }
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        reject(e);
+      }
     });
     req.on('error', reject);
   });
@@ -2731,7 +2816,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'POST' && path === '/enhance') {
-      const body = await readJsonBody(req) as any;
+      const body = (await readJsonBody(req)) as any;
       const isUrl = typeof body?.source === 'string' && body.source.startsWith('http');
       if (isUrl) {
         const args = HttpEnhanceGithubSchema.parse({ ...body, github_url: body.source });
@@ -2791,6 +2876,7 @@ git commit -m "feat: refactor http-server with readJsonBody helper, Zod validati
 ## Task 19: Update `bin/mcp-server.ts`
 
 **Files:**
+
 - Modify: `bin/mcp-server.ts`
 
 **Step 1: Rewrite `bin/mcp-server.ts`**
@@ -2812,7 +2898,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'enhance_local_file',
-      description: 'Enhance a local awesome-list markdown file with GitHub metadata and improved descriptions',
+      description:
+        'Enhance a local awesome-list markdown file with GitHub metadata and improved descriptions',
       inputSchema: zodToJsonSchema(HttpEnhanceLocalSchema),
     },
     {

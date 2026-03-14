@@ -28,7 +28,7 @@ The codebase has several recurring violations:
 Single source of truth for all magic values:
 
 ```typescript
-export const DEFAULT_CACHE_TTL = 86400;       // seconds (24h)
+export const DEFAULT_CACHE_TTL = 86400; // seconds (24h)
 export const DEFAULT_CACHE_DIR = '.awesome-cache';
 export const DEFAULT_REQUEST_TIMEOUT = 10000; // ms
 export const DEFAULT_BADGE_STYLE = 'flat-square';
@@ -46,8 +46,12 @@ export interface Logger {
   warn(message: string): void;
   error(message: string): void;
 }
-export class ConsoleLogger implements Logger { /* wraps console.* */ }
-export class SilentLogger implements Logger { /* no-ops */ }
+export class ConsoleLogger implements Logger {
+  /* wraps console.* */
+}
+export class SilentLogger implements Logger {
+  /* no-ops */
+}
 ```
 
 - CLI (`enhanceCommand`) uses `ConsoleLogger` — preserves existing output behaviour
@@ -60,7 +64,9 @@ Typed error hierarchy for consistent error handling across all interfaces:
 
 ```typescript
 export class EnhanceError extends Error {}
-export class NetworkError extends EnhanceError { statusCode?: number }
+export class NetworkError extends EnhanceError {
+  statusCode?: number;
+}
 export class ConfigError extends EnhanceError {}
 ```
 
@@ -83,7 +89,7 @@ export interface EngineConfig {
   logger?: Logger;
 }
 
-export function createEngine(config: EngineConfig): ProcessorEngine
+export function createEngine(config: EngineConfig): ProcessorEngine;
 ```
 
 Both `enhanceCommand` and `enhance()` call `createEngine()` instead of manually building the engine.
@@ -99,8 +105,12 @@ export interface EnhanceArgs {
   output_path?: string;
   dry_run?: boolean;
 }
-export interface EnhanceLocalArgs extends EnhanceArgs { file_path: string; }
-export interface EnhanceGithubArgs extends EnhanceArgs { github_url: string; }
+export interface EnhanceLocalArgs extends EnhanceArgs {
+  file_path: string;
+}
+export interface EnhanceGithubArgs extends EnhanceArgs {
+  github_url: string;
+}
 
 export interface EnhanceResult {
   success: boolean;
@@ -110,8 +120,8 @@ export interface EnhanceResult {
   preview?: string;
 }
 
-export async function runEnhanceLocal(args: EnhanceLocalArgs): Promise<EnhanceResult>
-export async function runEnhanceGithub(args: EnhanceGithubArgs): Promise<EnhanceResult>
+export async function runEnhanceLocal(args: EnhanceLocalArgs): Promise<EnhanceResult>;
+export async function runEnhanceGithub(args: EnhanceGithubArgs): Promise<EnhanceResult>;
 ```
 
 All temp-dir creation, file I/O, and cleanup lives here. Both servers become thin adapters.
@@ -121,43 +131,53 @@ All temp-dir creation, file I/O, and cleanup lives here. Both servers become thi
 ## Modified Files
 
 ### `src/core/config.ts`
+
 - Replace literal `86400` with `DEFAULT_CACHE_TTL`
 
 ### `src/services/base-service.ts`
+
 - Constructor gains `cacheDir` and `logger` parameters (with defaults)
 - `handleError()` calls `this.logger.warn()` instead of `console.warn()`
 - Replace literal `10000` with `DEFAULT_REQUEST_TIMEOUT`, `'.awesome-cache'` with `DEFAULT_CACHE_DIR`
 
 ### `src/services/github.ts` / `src/services/scraper.ts`
+
 - Forward `logger` and `cacheDir` to `super()`
 
 ### `src/lib/processor-engine.ts`
+
 - Remove `process.stdout.write` and `console.log` from `process()`
 - Add optional `onProgress?: ProgressCallback` parameter to `process()`
 - `type ProgressCallback = (processed: number, total: number, modified: number) => void`
 
 ### `src/lib/description-processor.ts`
+
 - Replace literal `50` with `DESCRIPTION_MIN_LENGTH`
 
 ### `src/services/scraper.ts`
+
 - Replace literal `200` with `DESCRIPTION_MAX_LENGTH`
 
 ### `src/commands/enhance.ts`
+
 - Use `createEngine()` instead of manual registration
 - Use `ConsoleLogger` explicitly
 - Throw typed `EnhanceError` / `ConfigError` instead of calling `process.exit` mid-function
 - Pass `onProgress` callback to `engine.process()` for stdout output
 
 ### `src/index.ts`
+
 - `EnhanceOptions` gains `logger`, `cacheDir`, `onProgress` fields
 - `enhance()` calls `createEngine()` and passes `onProgress` to `engine.process()`
 - Export: `Logger`, `ConsoleLogger`, `SilentLogger`, `EnhanceError`, `NetworkError`, `ProgressCallback`
 
 ### `bin/http-server.ts`
+
 - Add `readJsonBody(req): Promise<unknown>` helper — eliminates 3× repeated chunk-reading
 - Replace `enhanceLocalFile()` and `enhanceGithubUrl()` with calls to `runEnhanceLocal()` / `runEnhanceGithub()` from `runner.ts`
 
 ### `bin/mcp-server.ts`
+
 - Replace inline tool implementations with calls to `runEnhanceLocal()` / `runEnhanceGithub()` from `runner.ts`
 
 ---
@@ -179,10 +199,10 @@ export interface EnhanceOptions {
   addMetadata?: boolean;
   updateDescriptions?: boolean;
   githubToken?: string | null;
-  cacheTTL?: number;           // default: DEFAULT_CACHE_TTL
-  badgeStyle?: string;         // default: DEFAULT_BADGE_STYLE
-  cacheDir?: string;           // NEW — default: DEFAULT_CACHE_DIR
-  logger?: Logger;             // NEW — default: SilentLogger
+  cacheTTL?: number; // default: DEFAULT_CACHE_TTL
+  badgeStyle?: string; // default: DEFAULT_BADGE_STYLE
+  cacheDir?: string; // NEW — default: DEFAULT_CACHE_DIR
+  logger?: Logger; // NEW — default: SilentLogger
   onProgress?: ProgressCallback; // NEW — default: undefined
 }
 ```

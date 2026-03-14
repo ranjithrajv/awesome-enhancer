@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Idempotency Protection**: Stale detection skips entries that already have a stale badge to prevent duplication.
 - **CLI Integration**: Added `--detect-stale` flag to CLI with appropriate validation and reporting.
 - **HTTP/MCP Support**: Enhanced HTTP and MCP APIs to accept and return stale detection results.
+- **GitLab Support**: Added full GitLab support on par with GitHub. All features work with both platforms:
+  - `--add-metadata`: Add stars, forks, and language badges using shields.io
+  - `--update-descriptions`: Fetch and improve descriptions via web scraping
+  - `--detect-stale`: Detect archived GitLab repositories
+- **GitLabService**: New Effect-based service for GitLab API integration (`src/services/gitlab.ts`).
+- **HTTP/MCP GitLab Endpoint**: Added `POST /enhance/gitlab` endpoint for GitLab URL enhancement.
+- **GitLab URL Parsing**: Updated `parseGitLabUrl` utility to properly parse GitLab.com URLs.
+- **GitLab Badges**: Badge generator now supports GitLab-specific badge URLs via shields.io.
+- **GitLab Configuration**: Added `gitlabToken` option and `GITLAB_TOKEN` env var support.
 
 ### Changed
 
@@ -25,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Validation Schemas**: Added `detectStale`/`detect_stale` fields to all validation schemas (CLI, HTTP, MCP).
 - **Return Types**: Updated `enhance()` function and related APIs to return `ProcessResult` with stale entries.
 - **Badge Generator**: Extended to support generating `status-archived` badges for stale detection.
+- **BadgeGenerator**: Extended to accept `provider` parameter (`'github'` or `'gitlab'`) for platform-specific badge URLs.
+- **Processors**: Updated `MetadataProcessor`, `StaleProcessor`, and `DescriptionProcessor` to handle both GitHub and GitLab URLs.
+- **ScraperService**: Added `fetchGitLabDescription` method for GitLab description extraction.
+- **App Layer**: Updated to include GitLab service layer alongside GitHub service.
+- **Schemas**: Added `gitlabToken` to config and enhance options schemas.
+
+### Fixed
+
+- Fixed GitLab service class declaration syntax to match GitHub service pattern.
 
 ## [0.3.0] - 2026-03-12
 

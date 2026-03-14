@@ -6,6 +6,7 @@ import { Node } from 'unist';
 import { Effect, Ref } from 'effect';
 import { LoggerService } from '../services/logger.js';
 import { GitHubService } from '../services/github.js';
+import { GitLabService } from '../services/gitlab.js';
 import { ScraperService } from '../services/scraper.js';
 import { EnhanceError, NetworkError } from '../core/errors.js';
 import { StaleEntry } from './stale-processor.js';
@@ -26,7 +27,7 @@ export interface Processor {
     linkNode: LinkNode,
     parent: any,
     index: number,
-  ): Effect.Effect<ProcessorResult, NetworkError, GitHubService | ScraperService>;
+  ): Effect.Effect<ProcessorResult, NetworkError, GitHubService | GitLabService | ScraperService>;
 }
 
 export class ProcessorEngine {
@@ -41,7 +42,7 @@ export class ProcessorEngine {
   ): Effect.Effect<
     { content: string; staleEntries: StaleEntry[] },
     EnhanceError | NetworkError,
-    LoggerService | GitHubService | ScraperService
+    LoggerService | GitHubService | GitLabService | ScraperService
   > {
     const processors = this.processors;
     return Effect.gen(function* () {
@@ -60,7 +61,7 @@ export class ProcessorEngine {
       const linkEffects: Effect.Effect<
         ProcessorResult,
         NetworkError,
-        GitHubService | ScraperService
+        GitHubService | GitLabService | ScraperService
       >[] = [];
 
       visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {

@@ -4,10 +4,10 @@
 
 ## Features
 
-- 📊 **Metadata Extraction** - Automatically add GitHub stats (stars, forks, language)
+- 📊 **Metadata Extraction** - Automatically add GitHub/GitLab stats (stars, forks, language)
 - 📝 **Auto-describe** - Generate or improve descriptions via web scraping
-- 🛡️ **Stale Detection** - Detect archived, disabled, and deleted GitHub repositories
-- 🌐 **URL Support** - Enhance lists directly from GitHub repository URLs
+- 🛡️ **Stale Detection** - Detect archived, disabled, and deleted GitHub/GitLab repositories
+- 🌐 **URL Support** - Enhance lists directly from GitHub or GitLab repository URLs
 - 🤖 **AI-Agent Friendly** - MCP server and HTTP API for programmatic access
 - 🖥️ **Interactive TUI** - Guided prompts for option selection
 - ⚡ **Fast** - Built with Bun, cached API calls
@@ -37,13 +37,14 @@ awesome-enhancer https://github.com/user/awesome-list --add-metadata --output en
 
 | Flag                    | Description                                                |
 | ----------------------- | ---------------------------------------------------------- |
-| `--add-metadata`        | Add GitHub stars, forks, language badges                   |
+| `--add-metadata`        | Add GitHub/GitLab stars, forks, language badges            |
 | `--update-descriptions` | Improve descriptions via web scraping                      |
-| `--detect-stale`        | Detect archived, disabled, and deleted GitHub repositories |
+| `--detect-stale`        | Detect archived, disabled, and deleted GitHub/GitLab repos |
 | `--output <file>`       | Output file path                                           |
 | `--dry-run`             | Preview without writing                                    |
 | `--skip-lint`           | Skip awesome-lint checks                                   |
 | `--github-token`        | GitHub API token for higher rate limits                    |
+| `--gitlab-token`        | GitLab API token for higher rate limits                    |
 
 ## AI-Agent Integration
 
@@ -81,6 +82,7 @@ npm run dev:server
 | POST   | `/enhance`        | Auto-detect source type |
 | POST   | `/enhance/local`  | Enhance local file      |
 | POST   | `/enhance/github` | Enhance GitHub URL      |
+| POST   | `/enhance/gitlab` | Enhance GitLab URL      |
 
 **Example:**
 
@@ -119,11 +121,12 @@ Add to `claude_desktop_config.json`:
 ```markdown
 - [axios](https://github.com/axios/axios) (⭐ 110k) - Promise based HTTP client for browser and Node.js ![TypeScript](https://img.shields.io/github/languages/top/axios/axios)
 - [axios/axios-mock-adapter](https://github.com/axios/axios-mock-adapter) - Mock library ![Status](https://img.shields.io/badge/status-archived-red?style=flat-square)
+- [gitlab-org/gitlab](https://gitlab.com/gitlab-org/gitlab) (⭐ 10k) - GitLab - Ruby on Rails based Git hosting, CI/CD, and more ![Ruby](https://img.shields.io/gitlab/languages/top/gitlab-org/gitlab)
 ```
 
 ## Configuration
 
-Set `GITHUB_TOKEN` env var for higher rate limits.
+Set `GITHUB_TOKEN` or `GITLAB_TOKEN` env vars for higher rate limits.
 
 ## License
 

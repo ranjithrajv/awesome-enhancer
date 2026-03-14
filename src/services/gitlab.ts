@@ -19,7 +19,7 @@ export class GitLabService extends Context.Tag('GitLabService')<
     fetchRepoReadme: (owner: string, repo: string) => Effect.Effect<string, NetworkError>;
     getRateLimitStatus: () => Effect.Effect<Option.Option<string>>;
   }
-> {}
+>() {}
 
 export const GitLabLive = (
   token: string | null,

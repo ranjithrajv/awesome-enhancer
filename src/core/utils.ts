@@ -4,22 +4,7 @@
  * @returns {object|null} - { owner, repo } or null if not a GitHub URL
  */
 export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-  const patterns = [
-    /github\.com\/([^/]+)\/([^/\s#?]+)/i,
-    /github\.com\/([^/]+)\/([^/\s#?]+)\.git/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      return {
-        owner: match[1],
-        repo: match[2].replace(/\.git$/, ''),
-      };
-    }
-  }
-
-  return null;
+  return parseGitUrl(url, 'github.com');
 }
 
 /**
@@ -28,9 +13,13 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
  * @returns {object|null} - { owner, repo } or null if not a GitLab URL
  */
 export function parseGitLabUrl(url: string): { owner: string; repo: string } | null {
+  return parseGitUrl(url, 'gitlab.com');
+}
+
+function parseGitUrl(url: string, domain: string): { owner: string; repo: string } | null {
   const patterns = [
-    /gitlab\.com\/([^/]+)\/([^/\s#?]+)/i,
-    /gitlab\.com\/([^/]+)\/([^/\s#?]+)\.git/i,
+    new RegExp(`${domain}/([^/]+)/([^/\\s#?]+)`, 'i'),
+    new RegExp(`${domain}/([^/]+)/([^/\\s#?]+)\\.git`, 'i'),
   ];
 
   for (const pattern of patterns) {
@@ -76,4 +65,21 @@ export function formatNumber(num: number): string {
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export interface TextNode {
+  type: 'text';
+  value: string;
+}
+
+export function ensureTextNodeExists(parent: any, index: number): TextNode {
+  if (index + 1 >= parent.children.length) {
+    const newTextNode = { type: 'text', value: '' };
+    parent.children.splice(index + 1, 0, newTextNode);
+  }
+  return parent.children[index + 1];
+}
+
+export function appendBadgeToNode(node: TextNode, badge: string): void {
+  node.value = `${node.value} ${badge}`;
 }

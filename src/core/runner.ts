@@ -6,9 +6,11 @@ import {
   EnhanceOptionsSchema,
   type HttpEnhanceLocalArgs,
   type HttpEnhanceGithubArgs,
+  type HttpEnhanceGitLabArgs,
 } from './schemas.js';
-import { parseGitHubUrl } from './utils.js';
+import { parseGitHubUrl, parseGitLabUrl } from './utils.js';
 import { GitHubService } from '../services/github.js';
+import { GitLabService } from '../services/gitlab.js';
 
 export interface EnhanceResult {
   success: boolean;
@@ -93,5 +95,45 @@ export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<Enh
     output_file: outputPath,
     enhanced_content: result.content,
     stale_entries: result.staleEntries,
+  };
+}
+
+export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<EnhanceResult> {
+  const options = EnhanceOptionsSchema.parse({
+    addMetadata: args.add_metadata,
+    updateDescriptions: args.update_descriptions,
+    detectStale: args.detect_stale ?? false,
+  });
+
+  const outputPath = args.output_path || 'enhanced-readme.md';
+  const gitlabInfo = parseGitLabUrl(args.gitlab_url);
+  if (!gitlabInfo) throw new Error('Invalid GitLab URL');
+
+  const layer = buildAppLayer(options);
+
+  const content = await Effect.runPromise(
+    Effect.flatMap(GitLabService, (s) => s.fetchRepoReadme(gitlabInfo.owner, gitlabInfo.repo)).pipe(
+      Effect.provide(layer),
+    ),
+  );
+
+  const engine = createEngine(options);
+  const gitlabResult = await Effect.runPromise(engine.process(content).pipe(Effect.provide(layer)));
+
+  if (args.dry_run) {
+    return {
+      success: true,
+      dry_run: true,
+      preview: gitlabResult.content,
+      stale_entries: gitlabResult.staleEntries,
+    };
+  }
+
+  await writeFile(outputPath, gitlabResult.content, 'utf-8');
+  return {
+    success: true,
+    output_file: outputPath,
+    enhanced_content: gitlabResult.content,
+    stale_entries: gitlabResult.staleEntries,
   };
 }

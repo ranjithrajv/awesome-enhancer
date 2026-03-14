@@ -14,7 +14,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'enhance_local_file',
-      description: 'Enhance a local awesome-list markdown file with GitHub metadata and improved descriptions',
+      description:
+        'Enhance a local awesome-list markdown file with GitHub metadata and improved descriptions',
       inputSchema: zodToJsonSchema(HttpEnhanceLocalSchema as any),
     },
     {

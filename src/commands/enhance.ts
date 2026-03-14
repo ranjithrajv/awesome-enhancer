@@ -7,8 +7,9 @@ import { createEngine } from '../core/engine-factory.js';
 import { buildAppLayer } from '../core/app-layer.js';
 import { EnhanceOptionsSchema } from '../core/schemas.js';
 import { ConsoleLive } from '../services/logger.js';
-import { isValidUrl, parseGitHubUrl } from '../core/utils.js';
+import { isValidUrl, parseGitHubUrl, parseGitLabUrl } from '../core/utils.js';
 import { GitHubService } from '../services/github.js';
+import { GitLabService } from '../services/gitlab.js';
 import { GitService } from '../services/git.js';
 import type { AppError } from '../core/errors.js';
 
@@ -19,6 +20,7 @@ export interface EnhanceCommandOptions {
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
+  gitlabToken?: string;
   skipLint?: boolean;
 }
 
@@ -63,6 +65,7 @@ export async function enhanceCommand(
 
     const config = yield* Effect.promise(() => loadConfig());
     const githubToken = options.githubToken || config.githubToken || null;
+    const gitlabToken = options.gitlabToken || config.gitlabToken || null;
     const cacheTTL = config.cacheTTL;
 
     const isUrl = isValidUrl(resolvedFileOrUrl!);
@@ -70,11 +73,19 @@ export async function enhanceCommand(
 
     if (isUrl) {
       const githubInfo = parseGitHubUrl(resolvedFileOrUrl!);
-      if (!githubInfo) throw new Error('Currently only GitHub repository URLs are supported.');
+      const gitlabInfo = parseGitLabUrl(resolvedFileOrUrl!);
 
-      console.log(`🌐 Fetching README from ${resolvedFileOrUrl}...`);
-      const github = yield* GitHubService;
-      content = yield* github.fetchRepoReadme(githubInfo.owner, githubInfo.repo);
+      if (githubInfo) {
+        console.log(`🌐 Fetching README from ${resolvedFileOrUrl}...`);
+        const github = yield* GitHubService;
+        content = yield* github.fetchRepoReadme(githubInfo.owner, githubInfo.repo);
+      } else if (gitlabInfo) {
+        console.log(`🌐 Fetching README from ${resolvedFileOrUrl}...`);
+        const gitlab = yield* GitLabService;
+        content = yield* gitlab.fetchRepoReadme(gitlabInfo.owner, gitlabInfo.repo);
+      } else {
+        throw new Error('Currently only GitHub and GitLab repository URLs are supported.');
+      }
     } else {
       console.log(`📖 Reading ${resolvedFileOrUrl}...`);
       content = yield* Effect.promise(() => readFile(resolvedFileOrUrl!, 'utf-8'));
@@ -94,6 +105,7 @@ export async function enhanceCommand(
       updateDescriptions: options.updateDescriptions,
       detectStale: options.detectStale ?? false,
       githubToken,
+      gitlabToken,
       cacheTTL,
     });
 
@@ -150,6 +162,7 @@ export async function enhanceCommand(
       addMetadata: options.addMetadata,
       updateDescriptions: options.updateDescriptions,
       githubToken: options.githubToken || config.githubToken || null,
+      gitlabToken: options.gitlabToken || config.gitlabToken || null,
       cacheTTL: config.cacheTTL,
     }),
   );

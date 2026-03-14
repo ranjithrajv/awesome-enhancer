@@ -19,11 +19,12 @@ const NoCacheLayer = Layer.succeed(CacheService, {
 });
 
 const TestLayer = (token: string | null = null) =>
-  GitHubLive(token).pipe(
-    Layer.provide(Layer.merge(NoCacheLayer, SilentLive)),
-  );
+  GitHubLive(token).pipe(Layer.provide(Layer.merge(NoCacheLayer, SilentLive)));
 
-const runGitHub = async <A>(effect: Effect.Effect<A, any, GitHubService>, token: string | null = null) => {
+const runGitHub = async <A>(
+  effect: Effect.Effect<A, any, GitHubService>,
+  token: string | null = null,
+) => {
   const exit = await Effect.runPromiseExit(effect.pipe(Effect.provide(TestLayer(token))));
   if (Exit.isFailure(exit)) {
     const failure = Cause.failureOption(exit.cause);
@@ -95,9 +96,7 @@ describe('GitHubService', () => {
   });
 
   it('getRateLimitStatus returns None initially', async () => {
-    const result = await runGitHub(
-      Effect.flatMap(GitHubService, (s) => s.getRateLimitStatus()),
-    );
+    const result = await runGitHub(Effect.flatMap(GitHubService, (s) => s.getRateLimitStatus()));
     expect(Option.isNone(result)).toBe(true);
   });
 
@@ -110,9 +109,7 @@ describe('GitHubService', () => {
 
     const result = await runGitHub(
       Effect.flatMap(GitHubService, (s) =>
-        s.fetchRepoMetadata('owner', 'repo').pipe(
-          Effect.flatMap(() => s.getRateLimitStatus()),
-        ),
+        s.fetchRepoMetadata('owner', 'repo').pipe(Effect.flatMap(() => s.getRateLimitStatus())),
       ),
     );
     expect(Option.isSome(result)).toBe(true);
@@ -142,8 +139,7 @@ describe('GitHubService', () => {
         Layer.provide(
           Layer.merge(
             Layer.succeed(CacheService, {
-              get: () =>
-                Effect.succeed(Option.some({ data: cachedData, headers: {} })),
+              get: () => Effect.succeed(Option.some({ data: cachedData, headers: {} })),
               set: () => Effect.void,
             }),
             SilentLive,
@@ -163,14 +159,15 @@ describe('GitHubService', () => {
 
   it('returns cached readme on cache hit', async () => {
     const CacheHitLayer = Layer.succeed(CacheService, {
-      get: () =>
-        Effect.succeed(Option.some({ data: '# Cached README', headers: {} })),
+      get: () => Effect.succeed(Option.some({ data: '# Cached README', headers: {} })),
       set: () => Effect.void,
     });
 
     const exit = await Effect.runPromiseExit(
       Effect.flatMap(GitHubService, (s) => s.fetchRepoReadme('owner', 'repo')).pipe(
-        Effect.provide(GitHubLive(null).pipe(Layer.provide(Layer.merge(CacheHitLayer, SilentLive)))),
+        Effect.provide(
+          GitHubLive(null).pipe(Layer.provide(Layer.merge(CacheHitLayer, SilentLive))),
+        ),
       ),
     );
     if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);

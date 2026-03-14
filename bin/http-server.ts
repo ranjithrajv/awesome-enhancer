@@ -5,8 +5,9 @@ import { ZodError } from 'zod';
 import {
   HttpEnhanceLocalSchema,
   HttpEnhanceGithubSchema,
+  HttpEnhanceGitLabSchema,
 } from '../src/core/schemas.js';
-import { runEnhanceLocal, runEnhanceGithub } from '../src/core/runner.js';
+import { runEnhanceLocal, runEnhanceGithub, runEnhanceGitLab } from '../src/core/runner.js';
 
 const DEFAULT_PORT = 9867;
 
@@ -24,10 +25,15 @@ function sendJson(res: http.ServerResponse, statusCode: number, data: object) {
 function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('data', (chunk: Buffer) => {
+      body += chunk.toString();
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(body)); }
-      catch (e) { reject(e); }
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        reject(e);
+      }
     });
     req.on('error', reject);
   });
@@ -57,6 +63,7 @@ const server = http.createServer(async (req, res) => {
           'POST /enhance': 'Enhance a local file or URL',
           'POST /enhance/local': 'Enhance local file',
           'POST /enhance/github': 'Enhance GitHub URL',
+          'POST /enhance/gitlab': 'Enhance GitLab URL',
           'GET /health': 'Health check',
         },
       });
@@ -77,8 +84,15 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (method === 'POST' && path === '/enhance/gitlab') {
+      const body = await readJsonBody(req);
+      const args = HttpEnhanceGitLabSchema.parse(body);
+      sendJson(res, 200, await runEnhanceGitLab(args));
+      return;
+    }
+
     if (method === 'POST' && path === '/enhance') {
-      const body = await readJsonBody(req) as any;
+      const body = (await readJsonBody(req)) as any;
       const isUrl = typeof body?.source === 'string' && body.source.startsWith('http');
       if (isUrl) {
         const args = HttpEnhanceGithubSchema.parse({ ...body, github_url: body.source });
@@ -106,5 +120,6 @@ server.listen(port, () => {
   console.log(`🚀 awesome-enhancer server running at http://localhost:${port}`);
   console.log(`   POST /enhance/local   - Enhance local file`);
   console.log(`   POST /enhance/github  - Enhance GitHub URL`);
+  console.log(`   POST /enhance/gitlab  - Enhance GitLab URL`);
   console.log(`   GET  /health          - Health check`);
 });

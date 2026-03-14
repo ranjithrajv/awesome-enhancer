@@ -24,6 +24,7 @@ export { buildAppLayer } from './core/app-layer.js';
 export { EnhanceOptionsSchema } from './core/schemas.js';
 export { LoggerService, ConsoleLive, SilentLive } from './services/logger.js';
 export { GitHubService, GitHubLive } from './services/github.js';
+export { GitLabService, GitLabLive } from './services/gitlab.js';
 export { ScraperService, ScraperLive } from './services/scraper.js';
 export { CacheService, FileCacheLive } from './services/cache.js';
 export { NetworkError, ConfigError, EnhanceError, ValidationError } from './core/errors.js';

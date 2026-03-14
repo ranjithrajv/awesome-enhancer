@@ -13,7 +13,11 @@ describe('NetworkError', () => {
   });
 
   it('includes statusCode when provided', () => {
-    const e = new NetworkError({ url: 'https://example.com', message: 'not found', statusCode: 404 });
+    const e = new NetworkError({
+      url: 'https://example.com',
+      message: 'not found',
+      statusCode: 404,
+    });
     expect(e.statusCode).toBe(404);
   });
 

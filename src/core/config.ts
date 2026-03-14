@@ -21,5 +21,6 @@ export async function loadConfig(): Promise<Config> {
   return ConfigSchema.parse({
     ...fileConfig,
     githubToken: process.env.GITHUB_TOKEN || fileConfig.githubToken,
+    gitlabToken: process.env.GITLAB_TOKEN || fileConfig.gitlabToken,
   });
 }
