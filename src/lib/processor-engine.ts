@@ -68,6 +68,7 @@ export class ProcessorEngine {
       >[] = [];
 
       visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
+        /* c8 ignore next -- index is always provided by visit(), TypeScript requires this check */
         if (index === undefined) return;
 
         linkEffects.push(

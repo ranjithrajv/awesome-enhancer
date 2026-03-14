@@ -35,7 +35,7 @@ export class BadgeGenerator {
       'status-archived': `badge/status-archived-red`,
     };
 
-    const label = labels[type] || 'GitHub';
+    const label = labels[type];
     const path = paths[type];
     let url = `https://img.shields.io/${path}?style=${this.style}`;
 

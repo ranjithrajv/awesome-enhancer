@@ -90,4 +90,31 @@ describe('DescriptionProcessor', () => {
     );
     expect(result.modified).toBe(false);
   });
+
+  it('skips if next node is not a text node', async () => {
+    const processor = new DescriptionProcessor();
+    const linkNode = createLinkNode('https://github.com/user/repo');
+    const parent = { children: [linkNode, { type: 'heading', value: 'Title' }] };
+
+    const result = await runProcessor(processor, linkNode, parent, null);
+    expect(result.modified).toBe(false);
+  });
+
+  it('skips if description is same as current text', async () => {
+    const processor = new DescriptionProcessor();
+    const linkNode = createLinkNode('https://github.com/user/repo');
+    const parent = createParent(linkNode, ' - A great library for doing things');
+
+    const result = await runProcessor(processor, linkNode, parent, 'A great library for doing things');
+    expect(result.modified).toBe(false);
+  });
+
+  it('skips if link is the last child (no next node)', async () => {
+    const processor = new DescriptionProcessor();
+    const linkNode = createLinkNode('https://github.com/user/repo');
+    const parent = { children: [linkNode] };
+
+    const result = await runProcessor(processor, linkNode, parent, 0);
+    expect(result.modified).toBe(false);
+  });
 });

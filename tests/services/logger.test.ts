@@ -65,3 +65,17 @@ describe('ConsoleLive', () => {
     spy.mockRestore();
   });
 });
+
+describe('SilentLive error method', () => {
+  it('error does not call console.error', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const logger = yield* LoggerService;
+        yield* logger.error('silent error');
+      }).pipe(Effect.provide(SilentLive)),
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});

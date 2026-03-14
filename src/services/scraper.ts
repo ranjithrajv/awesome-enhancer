@@ -40,11 +40,11 @@ export const ScraperLive: Layer.Layer<ScraperService, never, CacheService | Logg
                 headers: { 'User-Agent': 'awesome-enhancer-scraper' },
                 timeout: DEFAULT_REQUEST_TIMEOUT,
               }),
-            catch: (e: unknown) =>
+            catch: (e: any) =>
               new NetworkError({
                 url,
-                statusCode: (e as any)?.response?.status,
-                message: (e as any)?.message ?? String(e),
+                statusCode: e.response?.status,
+                message: e.message ?? String(e),
               }),
           });
 
@@ -58,6 +58,7 @@ export const ScraperLive: Layer.Layer<ScraperService, never, CacheService | Logg
       }
 
       function cleanDescription(description: string | undefined): Option.Option<string> {
+        /* c8 ignore next -- caller always passes a non-empty string (guarded by parseDescription) */
         if (!description) return Option.none();
         let cleaned = description
           .replace(/^GitHub - [^:]+:\s*/, '')

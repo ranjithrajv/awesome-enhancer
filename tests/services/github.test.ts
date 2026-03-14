@@ -11,7 +11,7 @@ vi.mock('axios', () => ({
 import axios from 'axios';
 import { GitHubService, GitHubLive } from '../../src/services/github.js';
 import { CacheService } from '../../src/services/cache.js';
-import { SilentLive } from '../../src/services/logger.js';
+import { SilentLive, ConsoleLive } from '../../src/services/logger.js';
 
 const NoCacheLayer = Layer.succeed(CacheService, {
   get: () => Effect.succeed(Option.none()),
@@ -173,5 +173,59 @@ describe('GitHubService', () => {
     if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);
     expect(exit.value).toBe('# Cached README');
     expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  it('handles error without response object', async () => {
+    (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+
+    await expect(
+      runGitHub(Effect.flatMap(GitHubService, (s) => s.fetchRepoMetadata('owner', 'repo'))),
+    ).rejects.toMatchObject({ _tag: 'NetworkError', message: 'Network error' });
+  });
+
+  it('handles error with response status', async () => {
+    const axiosError = Object.assign(new Error('Server error'), { response: { status: 503 } });
+    (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(axiosError);
+
+    await expect(
+      runGitHub(Effect.flatMap(GitHubService, (s) => s.fetchRepoMetadata('owner', 'repo'))),
+    ).rejects.toMatchObject({ _tag: 'NetworkError', statusCode: 503 });
+  });
+
+  it('handles non-Error rejection (covers String(e) fallback)', async () => {
+    (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce({ code: 'ECONNREFUSED' });
+
+    await expect(
+      runGitHub(Effect.flatMap(GitHubService, (s) => s.fetchRepoMetadata('owner', 'repo'))),
+    ).rejects.toMatchObject({ _tag: 'NetworkError' });
+  });
+
+  it('handles readme error with logging', async () => {
+    const axiosError = Object.assign(new Error('Not found'), { response: { status: 404 } });
+    (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(axiosError);
+
+    // This test uses ConsoleLive to ensure tapError logger branch is covered
+    try {
+      await Effect.runPromise(
+        Effect.flatMap(GitHubService, (s) => s.fetchRepoReadme('owner', 'repo')).pipe(
+          Effect.provide(
+            GitHubLive(null).pipe(
+              Layer.provide(Layer.merge(NoCacheLayer, ConsoleLive)),
+            ),
+          ),
+        ),
+      );
+      expect.fail('Expected error to be thrown');
+    } catch (error: any) {
+      expect(error.message).toContain('Not found');
+    }
+  });
+
+  it('handles readme non-Error rejection (covers String(e) fallback)', async () => {
+    (axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce({ code: 'ECONNREFUSED' });
+
+    await expect(
+      runGitHub(Effect.flatMap(GitHubService, (s) => s.fetchRepoReadme('owner', 'repo'))),
+    ).rejects.toMatchObject({ _tag: 'NetworkError' });
   });
 });

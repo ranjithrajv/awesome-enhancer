@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseGitHubUrl, isValidUrl, formatNumber } from '../../src/core/utils.js';
+import { parseGitHubUrl, parseGitLabUrl, isValidUrl, formatNumber } from '../../src/core/utils.js';
 
 describe('parseGitHubUrl', () => {
   it('parses standard GitHub URLs', () => {
@@ -80,5 +80,34 @@ describe('formatNumber', () => {
   it('formats millions with M suffix', () => {
     expect(formatNumber(1000000)).toBe('1.0M');
     expect(formatNumber(2500000)).toBe('2.5M');
+  });
+});
+
+describe('parseGitLabUrl', () => {
+  it('parses standard GitLab URLs', () => {
+    expect(parseGitLabUrl('https://gitlab.com/sindresorhus/awesome')).toEqual({
+      owner: 'sindresorhus',
+      repo: 'awesome',
+    });
+  });
+
+  it('parses GitLab URLs with .git suffix', () => {
+    expect(parseGitLabUrl('https://gitlab.com/user/repo.git')).toEqual({
+      owner: 'user',
+      repo: 'repo',
+    });
+  });
+
+  it('parses URLs with trailing path segments', () => {
+    const result = parseGitLabUrl('https://gitlab.com/user/repo/tree/main');
+    expect(result).toEqual({ owner: 'user', repo: 'repo' });
+  });
+
+  it('returns null for non-GitLab URLs', () => {
+    expect(parseGitLabUrl('https://github.com/user/repo')).toBeNull();
+  });
+
+  it('returns null for empty strings', () => {
+    expect(parseGitLabUrl('')).toBeNull();
   });
 });

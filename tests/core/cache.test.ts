@@ -68,4 +68,17 @@ describe('Cache', () => {
 
     expect(await cache.get('key')).toBe('new');
   });
+
+  it('returns null on corrupted cache file', async () => {
+    const cache = new Cache('.test-cache', 3600);
+    await cache.set('key', 'value');
+
+    // Corrupt the cache file by writing invalid JSON
+    const { join } = await import('path');
+    const { writeFile } = await import('fs/promises');
+    const filePath = join(process.cwd(), '.test-cache', Buffer.from('key').toString('base64') + '.json');
+    await writeFile(filePath, 'invalid json content', 'utf-8');
+
+    expect(await cache.get('key')).toBeNull();
+  });
 });

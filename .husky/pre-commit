@@ -11,9 +11,9 @@ echo ""
 echo "✓ Checking version consistency..."
 bun run check-version
 
-# 2. Tests (CI: bun.yml) - using Vite+ vp command
-echo "✓ Running tests..."
-vp test run
+# 2. Tests (CI: bun.yml) - using Vite+ vp command with coverage
+echo "✓ Running tests with coverage..."
+vp test run --coverage
 
 # 3. Type checking (CI: bun.yml, release.yml)
 echo "✓ Running typecheck..."

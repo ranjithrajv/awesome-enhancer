@@ -85,4 +85,13 @@ describe('MetadataProcessor', () => {
     expect(result.modified).toBe(true);
     expect(parent.children.length).toBe(2);
   });
+
+  it('skips if next node is not a text node', async () => {
+    const processor = new MetadataProcessor(new BadgeGenerator());
+    const linkNode = createLinkNode('https://github.com/user/repo');
+    const parent = { children: [linkNode, { type: 'heading', value: 'Title' }] };
+
+    const result = await runProcessor(processor, linkNode, parent, 0);
+    expect(result.modified).toBe(false);
+  });
 });

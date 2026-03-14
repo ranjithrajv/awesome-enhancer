@@ -99,4 +99,36 @@ describe('ProcessorEngine', () => {
 
     expect(capturedUrl).toBe('https://github.com/user/repo');
   });
+
+  it('collects stale entries from processors', async () => {
+    const engine = new ProcessorEngine();
+    const staleEntry = { url: 'https://github.com/old/repo', reason: 'archived' };
+
+    const proc: Processor = {
+      execute: vi.fn().mockReturnValue(
+        Effect.succeed({ modified: false, staleEntry }),
+      ),
+    };
+
+    engine.register(proc);
+    const result = await runEngine(engine, '- [Link](https://github.com/old/repo)\n');
+
+    expect(result.staleEntries).toContainEqual(staleEntry);
+  });
+
+  it('collects redirect entries from processors', async () => {
+    const engine = new ProcessorEngine();
+    const redirectEntry = { oldUrl: 'https://old.com', newUrl: 'https://new.com' };
+
+    const proc: Processor = {
+      execute: vi.fn().mockReturnValue(
+        Effect.succeed({ modified: false, redirectEntry }),
+      ),
+    };
+
+    engine.register(proc);
+    const result = await runEngine(engine, '- [Link](https://old.com)\n');
+
+    expect(result.redirectEntries).toContainEqual(redirectEntry);
+  });
 });

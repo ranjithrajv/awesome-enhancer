@@ -51,4 +51,33 @@ describe('BadgeGenerator', () => {
       expect(badge).toContain('style=flat-square');
     });
   });
+
+  describe('generateRedirectBadge', () => {
+    it('generates redirect badge', () => {
+      const badge = generator.generateRedirectBadge('redirect', 'old', 'new');
+      expect(badge).toBe(
+        '<img src="https://img.shields.io/badge/redirect-old/new-blue?style=flat-square" alt="redirect">',
+      );
+    });
+
+    it('generates redirect badge with custom label', () => {
+      const badge = generator.generateRedirectBadge('moved', 'user', 'repo');
+      expect(badge).toContain('moved');
+      expect(badge).toContain('user/repo');
+    });
+  });
+
+  describe('status-archived badge', () => {
+    it('generates status-archived badge without github prefix', () => {
+      const badge = generator.generateBadge('status-archived', 'user', 'repo', true);
+      expect(badge).toBe(
+        '<img src="https://img.shields.io/badge/status-archived-red?style=flat-square" alt="Status">',
+      );
+    });
+
+    it('generates status-archived badge in markdown format', () => {
+      const badge = generator.generateBadge('status-archived', 'user', 'repo', false);
+      expect(badge).toBe('![Status](https://img.shields.io/badge/status-archived-red?style=flat-square)');
+    });
+  });
 });
