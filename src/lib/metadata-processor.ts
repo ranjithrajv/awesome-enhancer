@@ -5,15 +5,6 @@ import { BadgeGenerator } from './badge-generator.js';
 import { Processor, ProcessorResult, LinkNode } from './processor-engine.js';
 import { NetworkError } from '../core/errors.js';
 
-async function fetchMetadata<S>(
-  service: S,
-  owner: string,
-  repo: string,
-  fetchFn: (s: S, o: string, r: string) => Effect.Effect<any, NetworkError>,
-) {
-  return Effect.runPromise(fetchFn(service, owner, repo).pipe(Effect.option));
-}
-
 export class MetadataProcessor implements Processor {
   private badgeGenerator: BadgeGenerator;
 

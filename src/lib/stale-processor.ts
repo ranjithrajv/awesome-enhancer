@@ -1,7 +1,6 @@
 import { Effect } from 'effect';
-import { parseGitHubUrl, parseGitLabUrl } from '../core/utils.js';
+import { parseGitHubUrl, ensureTextNodeExists, appendBadgeToNode } from '../core/utils.js';
 import { GitHubService } from '../services/github.js';
-import { GitLabService } from '../services/gitlab.js';
 import { BadgeGenerator } from './badge-generator.js';
 import { Processor, ProcessorResult, LinkNode } from './processor-engine.js';
 import { NetworkError } from '../core/errors.js';
@@ -10,6 +9,49 @@ export interface StaleEntry {
   name: string;
   url: string;
   reason: 'archived' | 'disabled' | 'not-found';
+}
+
+function createStaleEntry(
+  name: string,
+  url: string,
+  reason: 'archived' | 'disabled' | 'not-found',
+): StaleEntry {
+  return { name, url, reason };
+}
+
+function checkAndMarkStale(
+  badgeGenerator: BadgeGenerator,
+  nextNode: any,
+  owner: string,
+  repo: string,
+  url: string,
+  isArchived: boolean,
+  isDisabled: boolean,
+): ProcessorResult {
+  if (!isArchived && !isDisabled) return { modified: false };
+
+  const staleBadge = badgeGenerator.generateBadge('status-archived', owner, repo, false);
+  appendBadgeToNode(nextNode, staleBadge);
+
+  return {
+    modified: true,
+    staleEntry: createStaleEntry(`${owner}/${repo}`, url, isDisabled ? 'disabled' : 'archived'),
+  };
+}
+
+function checkNotFound(
+  badgeGenerator: BadgeGenerator,
+  nextNode: any,
+  owner: string,
+  repo: string,
+  url: string,
+): ProcessorResult {
+  const staleBadge = badgeGenerator.generateBadge('status-archived', owner, repo, false);
+  appendBadgeToNode(nextNode, staleBadge);
+  return {
+    modified: true,
+    staleEntry: createStaleEntry(`${owner}/${repo}`, url, 'not-found'),
+  };
 }
 
 export class StaleProcessor implements Processor {
@@ -23,142 +65,42 @@ export class StaleProcessor implements Processor {
     linkNode: LinkNode,
     parent: any,
     index: number,
-  ): Effect.Effect<ProcessorResult, NetworkError, GitHubService | GitLabService> {
+  ): Effect.Effect<ProcessorResult, NetworkError, GitHubService> {
     const badgeGenerator = this.badgeGenerator;
     return Effect.gen(function* () {
       const url = linkNode.url;
       const githubInfo = parseGitHubUrl(url);
-      const gitlabInfo = parseGitLabUrl(url);
 
-      if (!githubInfo && !gitlabInfo) return { modified: false };
+      if (!githubInfo) return { modified: false };
 
-      if (index + 1 >= parent.children.length) {
-        const newTextNode = { type: 'text', value: '' };
-        parent.children.splice(index + 1, 0, newTextNode);
-      }
-      const nextNode = parent.children[index + 1];
+      const nextNode = ensureTextNodeExists(parent, index);
       if (nextNode.type !== 'text') return { modified: false };
       if (nextNode.value.includes('img.shields.io/badge/status-archived'))
         return { modified: false };
 
-      if (githubInfo) {
-        const github = yield* GitHubService;
-        const result = yield* github
-          .fetchRepoMetadata(githubInfo.owner, githubInfo.repo)
-          .pipe(Effect.either);
+      const github = yield* GitHubService;
+      const result = yield* github
+        .fetchRepoMetadata(githubInfo.owner, githubInfo.repo)
+        .pipe(Effect.either);
 
-        if (result._tag === 'Left') {
-          const error = result.left;
-          if (error.statusCode === 404) {
-            const staleBadge = badgeGenerator.generateBadge(
-              'status-archived',
-              githubInfo.owner,
-              githubInfo.repo,
-              false,
-            );
-            nextNode.value = `${nextNode.value} ${staleBadge}`;
-            return {
-              modified: true,
-              staleEntry: {
-                name: `${githubInfo.owner}/${githubInfo.repo}`,
-                url,
-                reason: 'not-found',
-              },
-            };
-          }
-          return { modified: false };
+      if (result._tag === 'Left') {
+        const error = result.left;
+        if (error.statusCode === 404) {
+          return checkNotFound(badgeGenerator, nextNode, githubInfo.owner, githubInfo.repo, url);
         }
-
-        const metadata = result.right;
-        if (metadata.archived) {
-          const staleBadge = badgeGenerator.generateBadge(
-            'status-archived',
-            githubInfo.owner,
-            githubInfo.repo,
-            false,
-          );
-          nextNode.value = `${nextNode.value} ${staleBadge}`;
-          return {
-            modified: true,
-            staleEntry: {
-              name: `${githubInfo.owner}/${githubInfo.repo}`,
-              url,
-              reason: 'archived',
-            },
-          };
-        }
-        if (metadata.disabled) {
-          const staleBadge = badgeGenerator.generateBadge(
-            'status-archived',
-            githubInfo.owner,
-            githubInfo.repo,
-            false,
-          );
-          nextNode.value = `${nextNode.value} ${staleBadge}`;
-          return {
-            modified: true,
-            staleEntry: {
-              name: `${githubInfo.owner}/${githubInfo.repo}`,
-              url,
-              reason: 'disabled',
-            },
-          };
-        }
-
         return { modified: false };
       }
 
-      if (gitlabInfo) {
-        const gitlab = yield* GitLabService;
-        const result = yield* gitlab
-          .fetchRepoMetadata(gitlabInfo.owner, gitlabInfo.repo)
-          .pipe(Effect.either);
-
-        if (result._tag === 'Left') {
-          const error = result.left;
-          if (error.statusCode === 404) {
-            const staleBadge = badgeGenerator.generateBadge(
-              'status-archived',
-              gitlabInfo.owner,
-              gitlabInfo.repo,
-              false,
-            );
-            nextNode.value = `${nextNode.value} ${staleBadge}`;
-            return {
-              modified: true,
-              staleEntry: {
-                name: `${gitlabInfo.owner}/${gitlabInfo.repo}`,
-                url,
-                reason: 'not-found',
-              },
-            };
-          }
-          return { modified: false };
-        }
-
-        const metadata = result.right;
-        if (metadata.archived_at) {
-          const staleBadge = badgeGenerator.generateBadge(
-            'status-archived',
-            gitlabInfo.owner,
-            gitlabInfo.repo,
-            false,
-          );
-          nextNode.value = `${nextNode.value} ${staleBadge}`;
-          return {
-            modified: true,
-            staleEntry: {
-              name: `${gitlabInfo.owner}/${gitlabInfo.repo}`,
-              url,
-              reason: 'archived',
-            },
-          };
-        }
-
-        return { modified: false };
-      }
-
-      return { modified: false };
+      const metadata = result.right;
+      return checkAndMarkStale(
+        badgeGenerator,
+        nextNode,
+        githubInfo.owner,
+        githubInfo.repo,
+        url,
+        metadata.archived,
+        metadata.disabled,
+      );
     });
   }
 }
