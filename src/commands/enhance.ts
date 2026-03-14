@@ -15,6 +15,7 @@ import type { AppError } from '../core/errors.js';
 export interface EnhanceCommandOptions {
   addMetadata?: boolean;
   updateDescriptions?: boolean;
+  detectStale?: boolean;
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
@@ -54,9 +55,9 @@ export async function enhanceCommand(
       }
     }
 
-    if (!options.addMetadata && !options.updateDescriptions) {
+    if (!options.addMetadata && !options.updateDescriptions && !options.detectStale) {
       throw new Error(
-        'Please specify at least one enhancement option: --add-metadata or --update-descriptions',
+        'Please specify at least one enhancement option: --add-metadata, --update-descriptions, or --detect-stale',
       );
     }
 
@@ -91,13 +92,15 @@ export async function enhanceCommand(
     const parsed = EnhanceOptionsSchema.parse({
       addMetadata: options.addMetadata,
       updateDescriptions: options.updateDescriptions,
+      detectStale: options.detectStale ?? false,
       githubToken,
       cacheTTL,
     });
 
     console.log('\n✨ Enhancing awesome list...\n');
     const engine = createEngine(parsed);
-    const enhanced = yield* engine.process(content);
+    const result = yield* engine.process(content);
+    const enhanced = result.content;
 
     const defaultOutputFile = isUrl ? 'enhanced-readme.md' : resolvedFileOrUrl!;
     const outputFile = options.output || defaultOutputFile;
@@ -107,10 +110,27 @@ export async function enhanceCommand(
       console.log('─'.repeat(80));
       console.log(enhanced);
       console.log('─'.repeat(80));
+
+      // Print stale entries if any
+      if (result.staleEntries.length > 0) {
+        console.log('\n⚠️  Stale entries detected:');
+        for (const entry of result.staleEntries) {
+          console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
+        }
+      }
+
       console.log('\n✅ Dry-run complete. No files were modified.');
     } else {
       yield* Effect.promise(() => writeFile(outputFile, enhanced, 'utf-8'));
       console.log(`\n✅ Successfully enhanced! Output written to: ${outputFile}`);
+
+      // Print stale entries if any
+      if (result.staleEntries.length > 0) {
+        console.log('\n⚠️  Stale entries detected:');
+        for (const entry of result.staleEntries) {
+          console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
+        }
+      }
     }
 
     if (!options.skipLint && !options.dryRun) {

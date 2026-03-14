@@ -8,6 +8,7 @@ import { LoggerService } from '../services/logger.js';
 import { GitHubService } from '../services/github.js';
 import { ScraperService } from '../services/scraper.js';
 import { EnhanceError, NetworkError } from '../core/errors.js';
+import { StaleEntry } from './stale-processor.js';
 
 export interface LinkNode extends Node {
   type: 'link';
@@ -15,12 +16,17 @@ export interface LinkNode extends Node {
   children: any[];
 }
 
+export interface ProcessorResult {
+  modified: boolean;
+  staleEntry?: StaleEntry; // only set by StaleProcessor
+}
+
 export interface Processor {
   execute(
     linkNode: LinkNode,
     parent: any,
     index: number,
-  ): Effect.Effect<boolean, NetworkError, GitHubService | ScraperService>;
+  ): Effect.Effect<ProcessorResult, NetworkError, GitHubService | ScraperService>;
 }
 
 export class ProcessorEngine {
@@ -33,7 +39,7 @@ export class ProcessorEngine {
   process(
     content: string,
   ): Effect.Effect<
-    string,
+    { content: string; staleEntries: StaleEntry[] },
     EnhanceError | NetworkError,
     LoggerService | GitHubService | ScraperService
   > {
@@ -43,12 +49,19 @@ export class ProcessorEngine {
       const tree = unified().use(remarkParse).parse(content);
 
       let totalLinks = 0;
-      visit(tree, 'link', () => { totalLinks++; });
+      visit(tree, 'link', () => {
+        totalLinks++;
+      });
 
       const processedRef = yield* Ref.make(0);
       const modifiedRef = yield* Ref.make(0);
+      const staleEntriesRef = yield* Ref.make<StaleEntry[]>([]);
 
-      const linkEffects: Effect.Effect<void, NetworkError, GitHubService | ScraperService>[] = [];
+      const linkEffects: Effect.Effect<
+        ProcessorResult,
+        NetworkError,
+        GitHubService | ScraperService
+      >[] = [];
 
       visit(tree, 'link', (linkNode: any, index: number | undefined, parent: any) => {
         if (index === undefined) return;
@@ -58,7 +71,10 @@ export class ProcessorEngine {
             let modified = false;
             for (const processor of processors) {
               const result = yield* processor.execute(linkNode as LinkNode, parent, index);
-              if (result) modified = true;
+              if (result.modified) modified = true;
+              if (result.staleEntry !== undefined) {
+                yield* Ref.update(staleEntriesRef, (es) => [...es, result.staleEntry!]);
+              }
             }
             const processed = yield* Ref.updateAndGet(processedRef, (n) => n + 1);
             if (modified) yield* Ref.update(modifiedRef, (n) => n + 1);
@@ -68,17 +84,19 @@ export class ProcessorEngine {
                 `\r✨ Processed ${processed}/${totalLinks} links, enhanced ${modifiedCount}...`,
               );
             }
+            return { modified: modified, staleEntry: undefined };
           }),
         );
       });
 
-      yield* Effect.all(linkEffects, { concurrency: 'unbounded' });
-
+      const _linkResults = yield* Effect.all(linkEffects, { concurrency: 'unbounded' });
       const processed = yield* Ref.get(processedRef);
       const modified = yield* Ref.get(modifiedRef);
+      const staleEntries = yield* Ref.get(staleEntriesRef);
       yield* logger.log(`\n✅ Finished: ${processed} links analyzed, ${modified} enhanced.`);
 
-      return unified()
+      let contentString: string;
+      contentString = unified()
         .use(remarkStringify, {
           bullet: '-',
           emphasis: '_',
@@ -86,6 +104,11 @@ export class ProcessorEngine {
           listItemIndent: 'one',
         })
         .stringify(tree as any);
+
+      return {
+        content: contentString,
+        staleEntries,
+      };
     });
   }
 }

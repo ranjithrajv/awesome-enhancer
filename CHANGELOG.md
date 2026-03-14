@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-14
+
+### Added
+
+- **Stale/Archived Repo Detection**: Added `--detect-stale` flag to detect archived, disabled, and deleted (404) GitHub repositories in awesome lists. When enabled, stale entries receive a red shields.io badge appended in-place, and a summary report is printed to stdout.
+- **RepoMetadata Expansion**: Extended `RepoMetadata` interface with `archived: boolean` and `disabled: boolean` fields to properly type GitHub API responses.
+- **StaleProcessor**: New processor that identifies stale repositories using GitHub API signals (archived, disabled, or 404) and appends status badges.
+- **ProcessorResult Interface**: Updated processor interface to return `ProcessorResult` objects that can contain stale entry information.
+- **Idempotency Protection**: Stale detection skips entries that already have a stale badge to prevent duplication.
+- **CLI Integration**: Added `--detect-stale` flag to CLI with appropriate validation and reporting.
+- **HTTP/MCP Support**: Enhanced HTTP and MCP APIs to accept and return stale detection results.
+
+### Changed
+
+- **Processor Interface**: Modified `Processor.execute()` to return `ProcessorResult` instead of boolean to support stale entry tracking.
+- **ProcessorEngine**: Updated to collect stale entries from all processors and return them alongside processed content.
+- **Engine Factory**: Updated to register `StaleProcessor` when `detectStale` option is enabled.
+- **Validation Schemas**: Added `detectStale`/`detect_stale` fields to all validation schemas (CLI, HTTP, MCP).
+- **Return Types**: Updated `enhance()` function and related APIs to return `ProcessResult` with stale entries.
+- **Badge Generator**: Extended to support generating `status-archived` badges for stale detection.
+
 ## [0.3.0] - 2026-03-12
 
 ### Added
@@ -38,9 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Interactive TUI**: Added Ink-based interactive CLI with guided prompts for option selection.
-- **MCP Server**: Added Model Context Protocol server for AI agent integration (`awesome-enhance-mcp`).
-- **HTTP API Server**: Added HTTP REST API server on port 9867 (`awesome-enhance-server`).
-- **Skill File**: Added `skill/awesome-enhance/SKILL.md` for Claude agent documentation.
+- **MCP Server**: Added Model Context Protocol server for AI agent integration (`awesome-enhancer-mcp`).
+- **HTTP API Server**: Added HTTP REST API server on port 9867 (`awesome-enhancer-server`).
+- **Skill File**: Added `skill/awesome-enhancer/SKILL.md` for Claude agent documentation.
 - **AI-Agent Friendly**: Tool now accessible via MCP, HTTP API, and JSON output.
 - **Test Coverage**: Added 80% minimum test coverage threshold in pre-commit hooks.
 - **GitHub Actions CI**: Added Bun workflow for automated testing, linting, and building.
@@ -70,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of awesome-enhance.
+- Initial release of awesome-enhancer.
 - **TypeScript Migration**: Entire codebase rewritten in TypeScript for better safety and DX.
 - **Architectural Refactor**: Moved to a modular structure (`bin/`, `src/core/`, `src/services/`, `src/lib/`, `src/commands/`).
 - **Smart Auto-Detection**: CLI now automatically suggests local README if run inside a Git repository.

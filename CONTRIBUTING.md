@@ -1,13 +1,13 @@
-# Contributing to awesome-enhance
+# Contributing to awesome-enhancer
 
-Thank you for contributing to awesome-enhance!
+Thank you for contributing to awesome-enhancer!
 
 ## Development Setup
 
 ```bash
 # Clone and install
-git clone https://github.com/ranjithrajv/awesome-enhance.git
-cd awesome-enhance
+git clone https://github.com/ranjithrajv/awesome-enhancer.git
+cd awesome-enhancer
 bun install
 
 # Development

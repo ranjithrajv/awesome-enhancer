@@ -25,7 +25,13 @@ function createParent(linkNode: LinkNode, trailingText = ' - Description') {
   return { children: [linkNode, { type: 'text', value: trailingText }] };
 }
 
-function runProcessor(processor: MetadataProcessor, linkNode: LinkNode, parent: any, index: number, metadata: any = { stargazers_count: 100 }) {
+function runProcessor(
+  processor: MetadataProcessor,
+  linkNode: LinkNode,
+  parent: any,
+  index: number,
+  metadata: any = { stargazers_count: 100 },
+) {
   return Effect.runPromise(
     processor.execute(linkNode, parent, index).pipe(Effect.provide(makeGitHubLayer(metadata))),
   );
@@ -39,7 +45,7 @@ describe('MetadataProcessor', () => {
 
     const result = await runProcessor(processor, linkNode, parent, 0);
 
-    expect(result).toBe(true);
+    expect(result.modified).toBe(true);
     expect(parent.children[1].value).toContain('img.shields.io');
   });
 
@@ -49,7 +55,7 @@ describe('MetadataProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await runProcessor(processor, linkNode, parent, 0);
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 
   it('skips links that already have badges', async () => {
@@ -58,7 +64,7 @@ describe('MetadataProcessor', () => {
     const parent = createParent(linkNode, ' img.shields.io existing badge');
 
     const result = await runProcessor(processor, linkNode, parent, 0);
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 
   it('returns false when metadata fetch fails (NetworkError)', async () => {
@@ -67,7 +73,7 @@ describe('MetadataProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await runProcessor(processor, linkNode, parent, 0, null);
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 
   it('creates a text node if none exists after the link', async () => {
@@ -76,8 +82,7 @@ describe('MetadataProcessor', () => {
     const parent = { children: [linkNode] };
 
     const result = await runProcessor(processor, linkNode, parent, 0);
-
-    expect(result).toBe(true);
+    expect(result.modified).toBe(true);
     expect(parent.children.length).toBe(2);
   });
 });

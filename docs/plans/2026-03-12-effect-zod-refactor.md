@@ -911,7 +911,7 @@ export const GitHubLive = (
 
           const response = yield* Effect.tryPromise({
             try: () =>
-              axios.get<T>(url, { headers: { ...headers, 'User-Agent': 'awesome-enhance-github' }, timeout: DEFAULT_REQUEST_TIMEOUT }),
+              axios.get<T>(url, { headers: { ...headers, 'User-Agent': 'awesome-enhancer-github' }, timeout: DEFAULT_REQUEST_TIMEOUT }),
             catch: (e: any) =>
               new NetworkError({ url, statusCode: e.response?.status, message: e.message }),
           });
@@ -932,7 +932,7 @@ export const GitHubLive = (
             const response = yield* Effect.tryPromise({
               try: () =>
                 axios.get<RepoMetadata>(url, {
-                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhance-github' },
+                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhancer-github' },
                   timeout: DEFAULT_REQUEST_TIMEOUT,
                 }),
               catch: (e: any) =>
@@ -1143,7 +1143,7 @@ export const ScraperLive: Layer.Layer<
         const response = yield* Effect.tryPromise({
           try: () =>
             axios.get<string>(url, {
-              headers: { 'User-Agent': 'awesome-enhance-scraper' },
+              headers: { 'User-Agent': 'awesome-enhancer-scraper' },
               timeout: DEFAULT_REQUEST_TIMEOUT,
             }),
           catch: (e: any) =>
@@ -2507,7 +2507,7 @@ export async function enhanceCommand(
   options: EnhanceCommandOptions,
 ) {
   const program = Effect.gen(function* () {
-    console.log('🚀 Starting awesome-enhance...\n');
+    console.log('🚀 Starting awesome-enhancer...\n');
 
     if (!fileOrUrl) {
       if (GitService.isGitRepo()) {
@@ -2699,13 +2699,13 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (method === 'GET' && path === '/health') {
-      sendJson(res, 200, { status: 'ok', name: 'awesome-enhance' });
+      sendJson(res, 200, { status: 'ok', name: 'awesome-enhancer' });
       return;
     }
 
     if (method === 'GET' && path === '/') {
       sendJson(res, 200, {
-        name: 'awesome-enhance',
+        name: 'awesome-enhancer',
         endpoints: {
           'POST /enhance': 'Enhance a local file or URL',
           'POST /enhance/local': 'Enhance local file',
@@ -2756,7 +2756,7 @@ const server = http.createServer(async (req, res) => {
 
 const port = parseInt(process.env.PORT || String(DEFAULT_PORT), 10);
 server.listen(port, () => {
-  console.log(`🚀 awesome-enhance server running at http://localhost:${port}`);
+  console.log(`🚀 awesome-enhancer server running at http://localhost:${port}`);
   console.log(`   POST /enhance/local   - Enhance local file`);
   console.log(`   POST /enhance/github  - Enhance GitHub URL`);
   console.log(`   GET  /health          - Health check`);
@@ -2804,7 +2804,7 @@ import { HttpEnhanceLocalSchema, HttpEnhanceGithubSchema } from '../src/core/sch
 import { runEnhanceLocal, runEnhanceGithub } from '../src/core/runner.js';
 
 const server = new Server(
-  { name: 'awesome-enhance', version: '0.1.0' },
+  { name: 'awesome-enhancer', version: '0.1.0' },
   { capabilities: { tools: {} } },
 );
 

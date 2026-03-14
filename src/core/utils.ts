@@ -23,6 +23,30 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
 }
 
 /**
+ * Parse GitLab repository URL
+ * @param {string} url - URL to parse
+ * @returns {object|null} - { owner, repo } or null if not a GitLab URL
+ */
+export function parseGitLabUrl(url: string): { owner: string; repo: string } | null {
+  const patterns = [
+    /gitlab\.com\/([^/]+)\/([^/\s#?]+)/i,
+    /gitlab\.com\/([^/]+)\/([^/\s#?]+)\.git/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return {
+        owner: match[1],
+        repo: match[2].replace(/\.git$/, ''),
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Validate URL format
  */
 export function isValidUrl(string: string): boolean {

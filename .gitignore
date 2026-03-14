@@ -79,3 +79,9 @@ enhanced-readme.md
 
 # Git worktrees
 .worktrees/
+
+# Generated docs
+docs/superpowers
+
+# Agent config files
+AGENTS.md

@@ -14,7 +14,7 @@ export class BadgeGenerator {
    * Generate badge in HTML (default)
    */
   generateBadge(
-    type: 'stars' | 'forks' | 'language' | 'last-commit',
+    type: 'stars' | 'forks' | 'language' | 'last-commit' | 'status-archived',
     owner: string,
     repo: string,
     useHtml: boolean = true,
@@ -24,6 +24,7 @@ export class BadgeGenerator {
       forks: 'Forks',
       language: 'Language',
       'last-commit': 'Last Commit',
+      'status-archived': 'Status',
     };
 
     const paths: Record<string, string> = {
@@ -31,11 +32,17 @@ export class BadgeGenerator {
       forks: `forks/${owner}/${repo}`,
       language: `languages/top/${owner}/${repo}`,
       'last-commit': `last-commit/${owner}/${repo}`,
+      'status-archived': `badge/status-archived-red`,
     };
 
     const label = labels[type] || 'GitHub';
     const path = paths[type];
-    const url = `https://img.shields.io/github/${path}?style=${this.style}`;
+    let url = `https://img.shields.io/${path}?style=${this.style}`;
+
+    // For GitHub badges, we need the github/ prefix
+    if (type !== 'status-archived') {
+      url = `https://img.shields.io/github/${path}?style=${this.style}`;
+    }
 
     if (useHtml) {
       return `<img src="${url}" alt="${label}">`;

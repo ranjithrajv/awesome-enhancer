@@ -35,14 +35,14 @@ describe('ProcessorEngine', () => {
     const engine = new ProcessorEngine();
     const input = '# Title\n\n- [Link](https://example.com) - Description\n';
     const output = await runEngine(engine, input);
-    expect(output).toContain('Link');
-    expect(output).toContain('https://example.com');
+    expect(output.content).toContain('Link');
+    expect(output.content).toContain('https://example.com');
   });
 
   it('calls registered processors for each link', async () => {
     const engine = new ProcessorEngine();
     const mockProcessor: Processor = {
-      execute: vi.fn().mockReturnValue(Effect.succeed(false)),
+      execute: vi.fn().mockReturnValue(Effect.succeed({ modified: false })),
     };
     engine.register(mockProcessor);
 
@@ -58,12 +58,18 @@ describe('ProcessorEngine', () => {
 
     const proc1: Processor = {
       execute: vi.fn().mockImplementation(() =>
-        Effect.sync(() => { order.push('proc1'); return false; }),
+        Effect.sync(() => {
+          order.push('proc1');
+          return { modified: false };
+        }),
       ),
     };
     const proc2: Processor = {
       execute: vi.fn().mockImplementation(() =>
-        Effect.sync(() => { order.push('proc2'); return false; }),
+        Effect.sync(() => {
+          order.push('proc2');
+          return { modified: false };
+        }),
       ),
     };
 
@@ -81,7 +87,10 @@ describe('ProcessorEngine', () => {
 
     const proc: Processor = {
       execute: vi.fn().mockImplementation((linkNode: LinkNode) =>
-        Effect.sync(() => { capturedUrl = linkNode.url; return false; }),
+        Effect.sync(() => {
+          capturedUrl = linkNode.url;
+          return { modified: false };
+        }),
       ),
     };
 

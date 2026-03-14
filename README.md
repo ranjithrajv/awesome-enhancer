@@ -1,4 +1,4 @@
-# awesome-enhance
+# awesome-enhancer
 
 > CLI tool to automatically enhance awesome lists with metadata and improved descriptions
 
@@ -6,6 +6,7 @@
 
 - 📊 **Metadata Extraction** - Automatically add GitHub stats (stars, forks, language)
 - 📝 **Auto-describe** - Generate or improve descriptions via web scraping
+- 🛡️ **Stale Detection** - Detect archived, disabled, and deleted GitHub repositories
 - 🌐 **URL Support** - Enhance lists directly from GitHub repository URLs
 - 🤖 **AI-Agent Friendly** - MCP server and HTTP API for programmatic access
 - 🖥️ **Interactive TUI** - Guided prompts for option selection
@@ -15,33 +16,34 @@
 
 ```bash
 # Global
-npm install -g awesome-enhance
+npm install -g awesome-enhancer
 
 # Or via Bun
-bun install -g awesome-enhance
+bun install -g awesome-enhancer
 ```
 
 ## CLI Usage
 
 ```bash
 # Interactive mode (with prompts)
-awesome-enhance
+awesome-enhancer
 
 # With flags
-awesome-enhance README.md --add-metadata --dry-run
-awesome-enhance https://github.com/user/awesome-list --add-metadata --output enhanced.md
+awesome-enhancer README.md --add-metadata --dry-run
+awesome-enhancer https://github.com/user/awesome-list --add-metadata --output enhanced.md
 ```
 
 ### Options
 
-| Flag                    | Description                              |
-| ----------------------- | ---------------------------------------- |
-| `--add-metadata`        | Add GitHub stars, forks, language badges |
-| `--update-descriptions` | Improve descriptions via web scraping    |
-| `--output <file>`       | Output file path                         |
-| `--dry-run`             | Preview without writing                  |
-| `--skip-lint`           | Skip awesome-lint checks                 |
-| `--github-token`        | GitHub API token for higher rate limits  |
+| Flag                    | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| `--add-metadata`        | Add GitHub stars, forks, language badges                   |
+| `--update-descriptions` | Improve descriptions via web scraping                      |
+| `--detect-stale`        | Detect archived, disabled, and deleted GitHub repositories |
+| `--output <file>`       | Output file path                                           |
+| `--dry-run`             | Preview without writing                                    |
+| `--skip-lint`           | Skip awesome-lint checks                                   |
+| `--github-token`        | GitHub API token for higher rate limits                    |
 
 ## AI-Agent Integration
 
@@ -49,7 +51,7 @@ awesome-enhance https://github.com/user/awesome-list --add-metadata --output enh
 
 ```bash
 # Start MCP server
-awesome-enhance-mcp
+awesome-enhancer-mcp
 ```
 
 Available tools:
@@ -62,7 +64,7 @@ Available tools:
 
 ```bash
 # Start HTTP server on port 9867
-awesome-enhance-server
+awesome-enhancer-server
 ```
 
 ```bash
@@ -95,9 +97,9 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "awesome-enhance": {
+    "awesome-enhancer": {
       "command": "npx",
-      "args": ["awesome-enhance-mcp"]
+      "args": ["awesome-enhancer-mcp"]
     }
   }
 }
@@ -109,12 +111,14 @@ Add to `claude_desktop_config.json`:
 
 ```markdown
 - [axios](https://github.com/axios/axios) - Promise based HTTP client
+- [axios/axios-mock-adapter](https://github.com/axios/axios-mock-adapter) - Mock library
 ```
 
-**After:**
+**After (with --add-metadata --detect-stale):**
 
 ```markdown
 - [axios](https://github.com/axios/axios) (⭐ 110k) - Promise based HTTP client for browser and Node.js ![TypeScript](https://img.shields.io/github/languages/top/axios/axios)
+- [axios/axios-mock-adapter](https://github.com/axios/axios-mock-adapter) - Mock library ![Status](https://img.shields.io/badge/status-archived-red?style=flat-square)
 ```
 
 ## Configuration

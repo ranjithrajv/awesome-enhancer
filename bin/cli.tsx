@@ -12,6 +12,7 @@ import { GitService } from '../src/services/git.js';
 interface CliOptions {
   addMetadata?: boolean;
   updateDescriptions?: boolean;
+  detectStale?: boolean;
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
@@ -29,6 +30,8 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
       options.addMetadata = true;
     } else if (arg === '--update-descriptions') {
       options.updateDescriptions = true;
+    } else if (arg === '--detect-stale') {
+      options.detectStale = true;
     } else if (arg === '--dry-run') {
       options.dryRun = true;
     } else if (arg === '--skip-lint') {
@@ -65,6 +68,7 @@ Arguments:
 Options:
   --add-metadata           Add GitHub repository metadata (stars, forks, language)
   --update-descriptions    Improve descriptions via web scraping
+  --detect-stale           Detect archived, disabled, and deleted GitHub repositories
   --output <file>          Output file (default: overwrites input)
   --dry-run                Preview changes without writing to file
   --github-token <token>   GitHub API token for higher rate limits
@@ -76,6 +80,7 @@ Examples:
   awesome-enhancer README.md --add-metadata
   awesome-enhancer https://github.com/user/awesome-list --update-descriptions
   awesome-enhancer README.md --add-metadata --update-descriptions --dry-run
+  awesome-enhancer README.md --detect-stale
 `);
 }
 
@@ -339,10 +344,10 @@ const App: React.FC = () => {
 
 const { fileOrUrl: argFile, options: argOptions } = parseArgs();
 
-if (argFile || argOptions.addMetadata || argOptions.updateDescriptions) {
+if (argFile || argOptions.addMetadata || argOptions.updateDescriptions || argOptions.detectStale) {
   (async () => {
     const options: CliOptions = argOptions;
-    if (!options.addMetadata && !options.updateDescriptions) {
+    if (!options.addMetadata && !options.updateDescriptions && !options.detectStale) {
       printHelp();
       process.exit(1);
     }

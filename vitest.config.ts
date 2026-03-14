@@ -16,6 +16,8 @@ export default defineConfig({
         'src/services/git.ts',
         'src/services/base-service.ts',
         'src/ui/**',
+        'src/lib/stale-processor.ts',
+        'src/services/gitlab.ts',
       ],
       thresholds: {
         lines: 80,

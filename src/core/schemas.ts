@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-  DEFAULT_CACHE_TTL,
-  DEFAULT_CACHE_DIR,
-  DEFAULT_BADGE_STYLE,
-} from './constants.js';
+import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_BADGE_STYLE } from './constants.js';
 
 export const ConfigSchema = z.object({
   githubToken: z.string().optional(),
@@ -13,6 +9,7 @@ export const ConfigSchema = z.object({
 export const EnhanceOptionsSchema = z.object({
   addMetadata: z.boolean().default(false),
   updateDescriptions: z.boolean().default(false),
+  detectStale: z.boolean().default(false),
   githubToken: z.string().nullable().default(null),
   cacheTTL: z.number().default(DEFAULT_CACHE_TTL),
   badgeStyle: z.string().default(DEFAULT_BADGE_STYLE),
@@ -23,6 +20,7 @@ export const HttpEnhanceLocalSchema = z.object({
   file_path: z.string(),
   add_metadata: z.boolean().default(true),
   update_descriptions: z.boolean().default(false),
+  detect_stale: z.boolean().default(false),
   output_path: z.string().optional(),
   dry_run: z.boolean().default(false),
 });
@@ -31,6 +29,7 @@ export const HttpEnhanceGithubSchema = z.object({
   github_url: z.string().url(),
   add_metadata: z.boolean().default(true),
   update_descriptions: z.boolean().default(false),
+  detect_stale: z.boolean().default(false),
   output_path: z.string().default('enhanced-readme.md'),
   dry_run: z.boolean().default(false),
 });

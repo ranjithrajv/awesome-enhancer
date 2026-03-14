@@ -47,7 +47,7 @@ describe('DescriptionProcessor', () => {
 
     const result = await runProcessor(processor, linkNode, parent);
 
-    expect(result).toBe(true);
+    expect(result.modified).toBe(true);
     expect(parent.children[1].value).toContain('A great library');
   });
 
@@ -58,7 +58,7 @@ describe('DescriptionProcessor', () => {
     const parent = createParent(linkNode, longDesc);
 
     const result = await runProcessor(processor, linkNode, parent);
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 
   it('skips if no description found', async () => {
@@ -67,7 +67,7 @@ describe('DescriptionProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await runProcessor(processor, linkNode, parent, null);
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 
   it('handles non-GitHub URLs', async () => {
@@ -76,7 +76,7 @@ describe('DescriptionProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await runProcessor(processor, linkNode, parent, 'A website description');
-    expect(result).toBe(true);
+    expect(result.modified).toBe(true);
     expect(parent.children[1].value).toContain('A website description');
   });
 
@@ -86,10 +86,8 @@ describe('DescriptionProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await Effect.runPromise(
-      processor
-        .execute(linkNode, parent, 0)
-        .pipe(Effect.provide(makeScraperErrorLayer())),
+      processor.execute(linkNode, parent, 0).pipe(Effect.provide(makeScraperErrorLayer())),
     );
-    expect(result).toBe(false);
+    expect(result.modified).toBe(false);
   });
 });

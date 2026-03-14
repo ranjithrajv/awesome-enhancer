@@ -6,42 +6,42 @@ import { NetworkError } from '../core/errors.js';
 import { DEFAULT_REQUEST_TIMEOUT } from '../core/constants.js';
 
 export interface RepoMetadata {
-  stargazers_count: number;
-  forks_count: number;
-  language: string | null;
-  archived: boolean;
-  disabled: boolean;
+  star_count: number;
+  fork_count: number;
+  description: string | null;
   [key: string]: unknown;
 }
 
-export class GitHubService extends Context.Tag('GitHubService')<
-  GitHubService,
+export class GitLabService extends Context.Tag('GitLabService')<
+  GitLabService,
   {
     fetchRepoMetadata: (owner: string, repo: string) => Effect.Effect<RepoMetadata, NetworkError>;
     fetchRepoReadme: (owner: string, repo: string) => Effect.Effect<string, NetworkError>;
     getRateLimitStatus: () => Effect.Effect<Option.Option<string>>;
   }
->() {}
+> {}
 
-export const GitHubLive = (
+export const GitLabLive = (
   token: string | null,
-): Layer.Layer<GitHubService, never, CacheService | LoggerService> =>
+): Layer.Layer<GitLabService, never, CacheService | LoggerService> =>
   Layer.effect(
-    GitHubService,
+    GitLabService,
     Effect.gen(function* () {
       const cache = yield* CacheService;
       const logger = yield* LoggerService;
       const rateLimitRef = yield* Ref.make<Option.Option<string>>(Option.none());
 
       function authHeaders(): Record<string, string> {
-        const base: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
-        if (token) base['Authorization'] = `token ${token}`;
+        const base: Record<string, string> = {};
+        if (token) base['Private-Token'] = token;
         return base;
       }
 
       return {
         fetchRepoMetadata: (owner: string, repo: string) => {
-          const url = `https://api.github.com/repos/${owner}/${repo}`;
+          const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(
+            `${owner}%2F${repo}`,
+          )}`;
           return Effect.gen(function* () {
             const cached = yield* cache.get<{
               data: RepoMetadata;
@@ -52,7 +52,10 @@ export const GitHubLive = (
             const response = yield* Effect.tryPromise({
               try: () =>
                 axios.get<RepoMetadata>(url, {
-                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhancer-github' },
+                  headers: {
+                    ...authHeaders(),
+                    'User-Agent': 'awesome-enhancer-gitlab',
+                  },
                   timeout: DEFAULT_REQUEST_TIMEOUT,
                 }),
               catch: (e: any) =>
@@ -65,7 +68,7 @@ export const GitHubLive = (
 
             yield* Ref.set(
               rateLimitRef,
-              Option.fromNullable(response.headers['x-ratelimit-remaining'] ?? null),
+              Option.fromNullable(response.headers['rate-limit-remaining'] ?? null),
             );
             yield* cache.set(url, {
               data: response.data,
@@ -76,7 +79,9 @@ export const GitHubLive = (
         },
 
         fetchRepoReadme: (owner: string, repo: string) => {
-          const url = `https://api.github.com/repos/${owner}/${repo}/readme`;
+          const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(
+            `${owner}%2F${repo}`,
+          )}/repository/files/README/raw?ref=master`;
           return Effect.gen(function* () {
             const cached = yield* cache.get<{ data: string; headers: Record<string, string> }>(url);
             if (Option.isSome(cached)) return cached.value.data;
@@ -86,8 +91,7 @@ export const GitHubLive = (
                 axios.get<string>(url, {
                   headers: {
                     ...authHeaders(),
-                    Accept: 'application/vnd.github.v3.raw',
-                    'User-Agent': 'awesome-enhancer-github',
+                    'User-Agent': 'awesome-enhancer-gitlab',
                   },
                   timeout: DEFAULT_REQUEST_TIMEOUT,
                 }),
@@ -99,7 +103,7 @@ export const GitHubLive = (
                 }),
             }).pipe(
               Effect.tapError((e) =>
-                logger.warn(`⚠️ [GitHubService] Failed to fetch ${url}: ${e.message}`),
+                logger.warn(`⚠️ [GitLabService] Failed to fetch ${url}: ${e.message}`),
               ),
             );
 

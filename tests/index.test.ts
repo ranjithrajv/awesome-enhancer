@@ -33,8 +33,8 @@ describe('enhance()', () => {
     const result = await Effect.runPromise(
       enhance('# Title\n\n- [Link](https://example.com) - Desc\n'),
     );
-    expect(result).toContain('Link');
-    expect(result).toContain('https://example.com');
+    expect(result.content).toContain('Link');
+    expect(result.content).toContain('https://example.com');
   });
 
   it('applies addMetadata option with GitHub links', async () => {
@@ -45,10 +45,8 @@ describe('enhance()', () => {
     });
 
     const content = '# Test\n\n- [Repo](https://github.com/user/repo) - A repo\n';
-    const result = await Effect.runPromise(
-      enhance(content, { addMetadata: true }),
-    );
-    expect(result).toContain('img.shields.io');
+    const result = await Effect.runPromise(enhance(content, { addMetadata: true }));
+    expect(result.content).toContain('img.shields.io');
   });
 
   it('validates options with Zod and rejects invalid input', () => {
