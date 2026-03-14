@@ -60,13 +60,6 @@ export function formatNumber(num: number): string {
   return num.toString();
 }
 
-/**
- * Sleep for specified milliseconds
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export interface TextNode {
   type: 'text';
   value: string;

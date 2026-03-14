@@ -1,0 +1,4 @@
+{
+  "ignore": ["src/ui/index.ts", "rolldown.config.ts"],
+  "ignoreExportsUsedInFile": true,
+}
