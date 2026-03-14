@@ -77,7 +77,9 @@ describe('BadgeGenerator', () => {
 
     it('generates status-archived badge in markdown format', () => {
       const badge = generator.generateBadge('status-archived', 'user', 'repo', false);
-      expect(badge).toBe('![Status](https://img.shields.io/badge/status-archived-red?style=flat-square)');
+      expect(badge).toBe(
+        '![Status](https://img.shields.io/badge/status-archived-red?style=flat-square)',
+      );
     });
   });
 });

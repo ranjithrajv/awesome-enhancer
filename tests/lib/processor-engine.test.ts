@@ -105,9 +105,7 @@ describe('ProcessorEngine', () => {
     const staleEntry = { url: 'https://github.com/old/repo', reason: 'archived' };
 
     const proc: Processor = {
-      execute: vi.fn().mockReturnValue(
-        Effect.succeed({ modified: false, staleEntry }),
-      ),
+      execute: vi.fn().mockReturnValue(Effect.succeed({ modified: false, staleEntry })),
     };
 
     engine.register(proc);
@@ -121,9 +119,7 @@ describe('ProcessorEngine', () => {
     const redirectEntry = { oldUrl: 'https://old.com', newUrl: 'https://new.com' };
 
     const proc: Processor = {
-      execute: vi.fn().mockReturnValue(
-        Effect.succeed({ modified: false, redirectEntry }),
-      ),
+      execute: vi.fn().mockReturnValue(Effect.succeed({ modified: false, redirectEntry })),
     };
 
     engine.register(proc);

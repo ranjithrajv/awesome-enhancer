@@ -105,7 +105,12 @@ describe('DescriptionProcessor', () => {
     const linkNode = createLinkNode('https://github.com/user/repo');
     const parent = createParent(linkNode, ' - A great library for doing things');
 
-    const result = await runProcessor(processor, linkNode, parent, 'A great library for doing things');
+    const result = await runProcessor(
+      processor,
+      linkNode,
+      parent,
+      'A great library for doing things',
+    );
     expect(result.modified).toBe(false);
   });
 

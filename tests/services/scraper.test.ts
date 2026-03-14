@@ -207,7 +207,8 @@ describe('ScraperService', () => {
 
   describe('cache behavior', () => {
     it('returns cached HTML on cache hit', async () => {
-      const cachedHtml = '<html><head><meta property="og:description" content="Cached description"></head></html>';
+      const cachedHtml =
+        '<html><head><meta property="og:description" content="Cached description"></head></html>';
       const CacheHitLayer = Layer.succeed(CacheService, {
         get: () => Effect.succeed(Option.some(cachedHtml)),
         set: () => Effect.void,

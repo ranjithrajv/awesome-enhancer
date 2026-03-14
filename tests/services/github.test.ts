@@ -209,9 +209,7 @@ describe('GitHubService', () => {
       await Effect.runPromise(
         Effect.flatMap(GitHubService, (s) => s.fetchRepoReadme('owner', 'repo')).pipe(
           Effect.provide(
-            GitHubLive(null).pipe(
-              Layer.provide(Layer.merge(NoCacheLayer, ConsoleLive)),
-            ),
+            GitHubLive(null).pipe(Layer.provide(Layer.merge(NoCacheLayer, ConsoleLive))),
           ),
         ),
       );
