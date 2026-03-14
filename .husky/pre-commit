@@ -1,1 +1,1 @@
-bun run test && bun run typecheck && bun run lint && bun run build && bun run format --check && bunx knip --exclude dependencies,unlisted
+bun run check-version && bun run test && bun run typecheck && bun run lint && bun run build && bun run format --check && bunx knip --exclude dependencies,unlisted

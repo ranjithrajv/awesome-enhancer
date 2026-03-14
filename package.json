@@ -37,8 +37,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings",
     "format": "prettier --write .",
+    "check-version": "node -e \"const p=require('./package.json');const v=p.version;const t=require('child_process').execSync('git describe --tags --abbrev=0',{encoding:'utf8'}).trim().replace('v','');if(v!==t)console.error('Version mismatch: package.json='+v+', git tag='+t)&&process.exit(1);console.log('Version OK:'+v)\"",
     "prepare": "husky",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run check-version && bun run build"
   },
   "lint-staged": {
     "*.ts": [
