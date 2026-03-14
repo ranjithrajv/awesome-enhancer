@@ -1,0 +1,119 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'feat'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'cleanup'
+  - title: '📚 Documentation'
+    labels:
+      - 'docs'
+      - 'documentation'
+  - title: '✅ Tests'
+    labels:
+      - 'test'
+      - 'tests'
+  - title: '🔒 Security'
+    labels:
+      - 'security'
+      - 'vulnerability'
+  - title: '⬆️ Dependencies'
+    labels:
+      - 'dependencies'
+      - 'dependabot'
+  - title: '🎨 Style'
+    labels:
+      - 'style'
+      - 'formatting'
+  - title: '⚡ Performance'
+    labels:
+      - 'performance'
+      - 'perf'
+  - title: '🌐 CI/CD'
+    labels:
+      - 'ci'
+      - 'cd'
+      - 'github-actions'
+  - title: '🔨 Other Changes'
+    labels:
+      - '*'
+
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bug'
+      - 'chore'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+  ---
+
+  ### 📦 Installation
+
+  ```bash
+  npm install -g awesome-enhancer@$RESOLVED_VERSION
+  ```
+
+  Or via Bun:
+  ```bash
+  bun install -g awesome-enhancer@$RESOLVED_VERSION
+  ```
+
+  ### 📊 Stats
+
+  - **Commits**: $COMMITS
+  - **Files changed**: $FILES_CHANGED
+  - **Lines added**: $LINES_ADDED
+  - **Lines removed**: $LINES_DELETED
+
+replacers:
+  # Remove conventional commit prefixes
+  - search: '/feat(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/fix(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/chore(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/docs(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/test(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/refactor(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/style(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/perf(\([^)]*\))?:\s*/g'
+    replace: ''
+  - search: '/ci(\([^)]*\))?:\s*/g'
+    replace: ''

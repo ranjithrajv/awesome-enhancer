@@ -81,10 +81,11 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
           npm publish --provenance
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
-          tag: ${{ github.ref_name }}
+          version: ${{ github.ref_name }}
+          commitish: main
