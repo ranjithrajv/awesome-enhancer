@@ -21,6 +21,10 @@ export class GitLabService extends Context.Tag('GitLabService')<
   }
 >() {}
 
+const GITLAB_BASE = 'https://gitlab.com/api/v4';
+const GITLAB_USER_AGENT = 'awesome-enhancer-gitlab';
+const GITLAB_RATE_LIMIT_HEADER = 'rate-limit-remaining';
+
 export const GitLabLive = (
   token: string | null,
 ): Layer.Layer<GitLabService, never, CacheService | LoggerService> =>
@@ -31,90 +35,69 @@ export const GitLabLive = (
       const logger = yield* LoggerService;
       const rateLimitRef = yield* Ref.make<Option.Option<string>>(Option.none());
 
-      function authHeaders(): Record<string, string> {
-        const base: Record<string, string> = {};
-        if (token) base['Private-Token'] = token;
-        return base;
-      }
+      const authHeaders = (): Record<string, string> => {
+        const headers: Record<string, string> = {};
+        if (token) headers['Private-Token'] = token;
+        return { ...headers, 'User-Agent': GITLAB_USER_AGENT };
+      };
+
+      const fetchJson = <T>(path: string): Effect.Effect<T, NetworkError> => {
+        return Effect.gen(function* () {
+          const url = `${GITLAB_BASE}${path}`;
+          const cached = yield* cache.get<{ data: T }>(url);
+          if (Option.isSome(cached)) return cached.value.data;
+
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              axios.get<T>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
+            catch: (e: any) =>
+              new NetworkError({
+                url,
+                statusCode: e.response?.status,
+                message: e.message ?? String(e),
+              }),
+          });
+
+          yield* Ref.set(
+            rateLimitRef,
+            Option.fromNullable(response.headers[GITLAB_RATE_LIMIT_HEADER] ?? null),
+          );
+          yield* cache.set(url, { data: response.data });
+          return response.data;
+        });
+      };
+
+      const fetchReadme = (owner: string, repo: string): Effect.Effect<string, NetworkError> => {
+        return Effect.gen(function* () {
+          const path = `/projects/${encodeURIComponent(`${owner}/${repo}`)}/repository/files/README/raw?ref=master`;
+          const url = `${GITLAB_BASE}${path}`;
+          const cached = yield* cache.get<{ data: string }>(url);
+          if (Option.isSome(cached)) return cached.value.data;
+
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              axios.get<string>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
+            catch: (e: any) =>
+              new NetworkError({
+                url,
+                statusCode: e.response?.status,
+                message: e.message ?? String(e),
+              }),
+          }).pipe(
+            Effect.tapError((e) =>
+              logger.warn(`⚠️ [GitLabService] Failed to fetch ${url}: ${e.message}`),
+            ),
+          );
+
+          yield* cache.set(url, { data: response.data });
+          return response.data;
+        });
+      };
 
       return {
-        fetchRepoMetadata: (owner: string, repo: string) => {
-          const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(
-            `${owner}%2F${repo}`,
-          )}`;
-          return Effect.gen(function* () {
-            const cached = yield* cache.get<{
-              data: RepoMetadata;
-              headers: Record<string, string>;
-            }>(url);
-            if (Option.isSome(cached)) return cached.value.data;
-
-            const response = yield* Effect.tryPromise({
-              try: () =>
-                axios.get<RepoMetadata>(url, {
-                  headers: {
-                    ...authHeaders(),
-                    'User-Agent': 'awesome-enhancer-gitlab',
-                  },
-                  timeout: DEFAULT_REQUEST_TIMEOUT,
-                }),
-              catch: (e: any) =>
-                new NetworkError({
-                  url,
-                  statusCode: e.response?.status,
-                  message: e.message ?? String(e),
-                }),
-            });
-
-            yield* Ref.set(
-              rateLimitRef,
-              Option.fromNullable(response.headers['rate-limit-remaining'] ?? null),
-            );
-            yield* cache.set(url, {
-              data: response.data,
-              headers: response.headers as Record<string, string>,
-            });
-            return response.data;
-          });
-        },
-
-        fetchRepoReadme: (owner: string, repo: string) => {
-          const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(
-            `${owner}%2F${repo}`,
-          )}/repository/files/README/raw?ref=master`;
-          return Effect.gen(function* () {
-            const cached = yield* cache.get<{ data: string; headers: Record<string, string> }>(url);
-            if (Option.isSome(cached)) return cached.value.data;
-
-            const response = yield* Effect.tryPromise({
-              try: () =>
-                axios.get<string>(url, {
-                  headers: {
-                    ...authHeaders(),
-                    'User-Agent': 'awesome-enhancer-gitlab',
-                  },
-                  timeout: DEFAULT_REQUEST_TIMEOUT,
-                }),
-              catch: (e: any) =>
-                new NetworkError({
-                  url,
-                  statusCode: e.response?.status,
-                  message: e.message ?? String(e),
-                }),
-            }).pipe(
-              Effect.tapError((e) =>
-                logger.warn(`⚠️ [GitLabService] Failed to fetch ${url}: ${e.message}`),
-              ),
-            );
-
-            yield* cache.set(url, {
-              data: response.data,
-              headers: response.headers as Record<string, string>,
-            });
-            return response.data;
-          });
-        },
-
+        fetchRepoMetadata: (owner, repo) =>
+          fetchJson<RepoMetadata>(`/projects/${encodeURIComponent(`${owner}/${repo}`)}`),
+        fetchRepoReadme: fetchReadme,
         getRateLimitStatus: () => Ref.get(rateLimitRef),
       };
     }),

@@ -23,6 +23,10 @@ export class GitHubService extends Context.Tag('GitHubService')<
   }
 >() {}
 
+const GITHUB_BASE = 'https://api.github.com';
+const GITHUB_USER_AGENT = 'awesome-enhancer-github';
+const GITHUB_RATE_LIMIT_HEADER = 'x-ratelimit-remaining';
+
 export const GitHubLive = (
   token: string | null,
 ): Layer.Layer<GitHubService, never, CacheService | LoggerService> =>
@@ -33,84 +37,70 @@ export const GitHubLive = (
       const logger = yield* LoggerService;
       const rateLimitRef = yield* Ref.make<Option.Option<string>>(Option.none());
 
-      function authHeaders(): Record<string, string> {
-        const base: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+      const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
+        const base: Record<string, string> = { Accept: 'application/vnd.github.v3+json', ...extra };
         if (token) base['Authorization'] = `token ${token}`;
-        return base;
-      }
+        return { ...base, 'User-Agent': GITHUB_USER_AGENT };
+      };
+
+      const fetchJson = <T>(path: string): Effect.Effect<T, NetworkError> => {
+        return Effect.gen(function* () {
+          const url = `${GITHUB_BASE}${path}`;
+          const cached = yield* cache.get<{ data: T }>(url);
+          if (Option.isSome(cached)) return cached.value.data;
+
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              axios.get<T>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
+            catch: (e: any) =>
+              new NetworkError({
+                url,
+                statusCode: e.response?.status,
+                message: e.message ?? String(e),
+              }),
+          });
+
+          yield* Ref.set(
+            rateLimitRef,
+            Option.fromNullable(response.headers[GITHUB_RATE_LIMIT_HEADER] ?? null),
+          );
+          yield* cache.set(url, { data: response.data });
+          return response.data;
+        });
+      };
+
+      const fetchReadme = (owner: string, repo: string): Effect.Effect<string, NetworkError> => {
+        return Effect.gen(function* () {
+          const url = `${GITHUB_BASE}/repos/${owner}/${repo}/readme`;
+          const cached = yield* cache.get<{ data: string }>(url);
+          if (Option.isSome(cached)) return cached.value.data;
+
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              axios.get<string>(url, {
+                headers: authHeaders({ Accept: 'application/vnd.github.v3.raw' }),
+                timeout: DEFAULT_REQUEST_TIMEOUT,
+              }),
+            catch: (e: any) =>
+              new NetworkError({
+                url,
+                statusCode: e.response?.status,
+                message: e.message ?? String(e),
+              }),
+          }).pipe(
+            Effect.tapError((e) =>
+              logger.warn(`⚠️ [GitHubService] Failed to fetch ${url}: ${e.message}`),
+            ),
+          );
+
+          yield* cache.set(url, { data: response.data });
+          return response.data;
+        });
+      };
 
       return {
-        fetchRepoMetadata: (owner: string, repo: string) => {
-          const url = `https://api.github.com/repos/${owner}/${repo}`;
-          return Effect.gen(function* () {
-            const cached = yield* cache.get<{
-              data: RepoMetadata;
-              headers: Record<string, string>;
-            }>(url);
-            if (Option.isSome(cached)) return cached.value.data;
-
-            const response = yield* Effect.tryPromise({
-              try: () =>
-                axios.get<RepoMetadata>(url, {
-                  headers: { ...authHeaders(), 'User-Agent': 'awesome-enhancer-github' },
-                  timeout: DEFAULT_REQUEST_TIMEOUT,
-                }),
-              catch: (e: any) =>
-                new NetworkError({
-                  url,
-                  statusCode: e.response?.status,
-                  message: e.message ?? String(e),
-                }),
-            });
-
-            yield* Ref.set(
-              rateLimitRef,
-              Option.fromNullable(response.headers['x-ratelimit-remaining'] ?? null),
-            );
-            yield* cache.set(url, {
-              data: response.data,
-              headers: response.headers as Record<string, string>,
-            });
-            return response.data;
-          });
-        },
-
-        fetchRepoReadme: (owner: string, repo: string) => {
-          const url = `https://api.github.com/repos/${owner}/${repo}/readme`;
-          return Effect.gen(function* () {
-            const cached = yield* cache.get<{ data: string; headers: Record<string, string> }>(url);
-            if (Option.isSome(cached)) return cached.value.data;
-
-            const response = yield* Effect.tryPromise({
-              try: () =>
-                axios.get<string>(url, {
-                  headers: {
-                    ...authHeaders(),
-                    Accept: 'application/vnd.github.v3.raw',
-                    'User-Agent': 'awesome-enhancer-github',
-                  },
-                  timeout: DEFAULT_REQUEST_TIMEOUT,
-                }),
-              catch: (e: any) =>
-                new NetworkError({
-                  url,
-                  statusCode: e.response?.status,
-                  message: e.message ?? String(e),
-                }),
-            }).pipe(
-              Effect.tapError((e) =>
-                logger.warn(`⚠️ [GitHubService] Failed to fetch ${url}: ${e.message}`),
-              ),
-            );
-
-            yield* cache.set(url, {
-              data: response.data,
-              headers: response.headers as Record<string, string>,
-            });
-            return response.data;
-          });
-        },
-
+        fetchRepoMetadata: (owner, repo) => fetchJson(`/repos/${owner}/${repo}`),
+        fetchRepoReadme: fetchReadme,
         getRateLimitStatus: () => Ref.get(rateLimitRef),
       };
     }),
