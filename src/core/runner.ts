@@ -23,6 +23,12 @@ export interface EnhanceResult {
     url: string;
     reason: 'archived' | 'disabled' | 'not-found';
   }>;
+  redirect_entries?: Array<{
+    name: string;
+    url: string;
+    newUrl: string;
+    reason: 'transferred' | 'renamed';
+  }>;
 }
 
 export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<EnhanceResult> {
@@ -30,6 +36,7 @@ export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<Enhan
     addMetadata: args.add_metadata,
     updateDescriptions: args.update_descriptions,
     detectStale: args.detect_stale ?? false,
+    detectRedirects: args.detect_redirects ?? false,
   });
 
   const content = await readFile(args.file_path, 'utf-8');
@@ -46,6 +53,7 @@ export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<Enhan
       dry_run: true,
       preview: result.content,
       stale_entries: result.staleEntries,
+      redirect_entries: result.redirectEntries,
     };
   }
 
@@ -55,6 +63,7 @@ export async function runEnhanceLocal(args: HttpEnhanceLocalArgs): Promise<Enhan
     output_file: outputPath,
     enhanced_content: result.content,
     stale_entries: result.staleEntries,
+    redirect_entries: result.redirectEntries,
   };
 }
 
@@ -63,6 +72,7 @@ export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<Enh
     addMetadata: args.add_metadata,
     updateDescriptions: args.update_descriptions,
     detectStale: args.detect_stale ?? false,
+    detectRedirects: args.detect_redirects ?? false,
   });
 
   const outputPath = args.output_path || 'enhanced-readme.md';
@@ -86,6 +96,7 @@ export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<Enh
       dry_run: true,
       preview: result.content,
       stale_entries: result.staleEntries,
+      redirect_entries: result.redirectEntries,
     };
   }
 
@@ -95,6 +106,7 @@ export async function runEnhanceGithub(args: HttpEnhanceGithubArgs): Promise<Enh
     output_file: outputPath,
     enhanced_content: result.content,
     stale_entries: result.staleEntries,
+    redirect_entries: result.redirectEntries,
   };
 }
 
@@ -103,6 +115,7 @@ export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<Enh
     addMetadata: args.add_metadata,
     updateDescriptions: args.update_descriptions,
     detectStale: args.detect_stale ?? false,
+    detectRedirects: args.detect_redirects ?? false,
   });
 
   const outputPath = args.output_path || 'enhanced-readme.md';
@@ -126,6 +139,7 @@ export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<Enh
       dry_run: true,
       preview: gitlabResult.content,
       stale_entries: gitlabResult.staleEntries,
+      redirect_entries: gitlabResult.redirectEntries,
     };
   }
 
@@ -135,5 +149,6 @@ export async function runEnhanceGitLab(args: HttpEnhanceGitLabArgs): Promise<Enh
     output_file: outputPath,
     enhanced_content: gitlabResult.content,
     stale_entries: gitlabResult.staleEntries,
+    redirect_entries: gitlabResult.redirectEntries,
   };
 }

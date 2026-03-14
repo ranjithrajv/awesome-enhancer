@@ -1,12 +1,12 @@
 # Competitive Analysis & Feature Roadmap
 
-**awesome-enhancer** — March 2026
+**awesome-enhancer** — March 2026 (v0.4.0)
 
 ---
 
 ## Executive Summary
 
-`awesome-enhancer` occupies a narrow but largely uncontested niche: it enriches _existing_ awesome list markdown files in-place with live GitHub metadata (stars, forks, language, descriptions) via CLI, MCP server, and HTTP API. No active, maintained competitor does all three together. The ecosystem is fragmented — linting, generation, link-checking, and badge creation are each served by separate tools — but end-to-end enrichment of an existing list is largely unsolved.
+`awesome-enhancer` occupies a narrow but largely uncontested niche: it enriches _existing_ awesome list markdown files in-place with live GitHub/GitLab metadata (stars, forks, language, descriptions, stale status, redirect detection) via CLI, MCP server, and HTTP API. No active, maintained competitor does all three together.
 
 ---
 
@@ -38,13 +38,13 @@
 
 ### 2a. Direct Competitors
 
-| Tool                         | Enriches Existing List?       | GitHub Metadata                      | CLI | MCP | HTTP API | Status       |
-| ---------------------------- | ----------------------------- | ------------------------------------ | --- | --- | -------- | ------------ |
-| **awesome-enhancer**         | ✅ Yes                        | Stars, forks, language, descriptions | ✅  | ✅  | ✅       | Active       |
-| `auto-awesome-list` (npm)    | Partial (tag syntax required) | Stars, description                   | ✅  | ❌  | ❌       | **Dead**     |
-| `awesome-stars` (npm)        | ✅ (stars only)               | Stars only                           | ✅  | ❌  | ❌       | Unclear      |
-| `generate-awesome` (npm)     | ❌ YAML → MD                  | Stars, last commit                   | ✅  | ❌  | ❌       | Low activity |
-| `best-of-generator` (Python) | ❌ YAML → MD                  | Full + quality score                 | ✅  | ❌  | ❌       | Active       |
+| Tool                         | Enriches Existing List?       | GitHub/GitLab Metadata                                                    | CLI | MCP | HTTP API | Status       |
+| ---------------------------- | ----------------------------- | ------------------------------------------------------------------------- | --- | --- | -------- | ------------ |
+| **awesome-enhancer**         | ✅ Yes                        | Stars, forks, language, descriptions, stale detection, redirect detection | ✅  | ✅  | ✅       | Active       |
+| `auto-awesome-list` (npm)    | Partial (tag syntax required) | Stars, description                                                        | ✅  | ❌  | ❌       | **Dead**     |
+| `awesome-stars` (npm)        | ✅ (stars only)               | Stars only                                                                | ✅  | ❌  | ❌       | Unclear      |
+| `generate-awesome` (npm)     | ❌ YAML → MD                  | Stars, last commit                                                        | ✅  | ❌  | ❌       | Low activity |
+| `best-of-generator` (Python) | ❌ YAML → MD                  | Full + quality score                                                      | ✅  | ❌  | ❌       | Active       |
 
 **Key takeaway:** The only active tool with a similar goal (`auto-awesome-list`) is dead. `best-of-generator` is the most sophisticated adjacent tool but requires migrating to YAML and is Python-only.
 
@@ -96,7 +96,7 @@ Prioritized by adoption impact, implementation effort, and competitive different
 
 **Implementation:** Thin Docker or composite action wrapping the CLI. Publish to GitHub Marketplace. This is the #1 driver of organic discovery.
 
-#### F2: Stale Entry Detection & Reporting
+#### ✅ F2: Stale Entry Detection & Reporting (COMPLETED v0.4.0)
 
 **Why:** The single most-requested implicit feature. Maintainers dread zombie entries.
 
@@ -173,8 +173,12 @@ Zero-config runs use defaults; config file makes the tool "sticky" (used session
 
 ### ✅ Completed Features
 
+- **F2: Stale Entry Detection** — Detects archived, disabled, and not-found (404) repositories, adds status badges, and reports stale entries
+- **F12: Redirect/Transfer Detection** — Detects repository transfers and renames via HEAD requests
+- **F11: GitLab Support** — Full GitLab.com support for metadata, descriptions, and stale detection
 - **awesome-lint integration** — Runs automatically before/after enhancement, with `--skip-lint` flag
 - **MCP Server** — Provides `enhance_local_file`, `enhance_github_url`, `enhance_with_json_output` tools
+- **Multiple badge styles** — Supports flat, flat-square, plastic, for-the-badge styles
 
 ---
 
@@ -188,19 +192,11 @@ Zero-config runs use defaults; config file makes the tool "sticky" (used session
 - `--lint-compat` flag that skips badge addition for sections where lint would fail
 - This turns awesome-enhancer from a risk into a safe tool
 
-#### F12: Deprecation/Redirect Detection
-
-**Why:** Many links in awesome lists redirect (repo renamed, transferred, or moved). GitHub follows redirects silently but the markdown still shows the old URL.
-
-- Detect permanent redirects (301) on GitHub URLs
-- Optionally rewrite to canonical URL
-- Flag repos that have been transferred to a new owner
-
 #### F13: Additional MCP Tools for AI Agents
 
 **Why:** The MCP interface is a strong differentiator. Make it better for AI agent use cases.
 
-- Add `detect_stale_entries` MCP tool — returns JSON of stale/archived repos in a list
+- ~~Add `detect_stale_entries` MCP tool~~ — ✅ Completed via CLI (`--detect-stale`)
 - Add `suggest_additions` MCP tool — given a topic, searches GitHub for repos not already in the list
 - List on `wong2/awesome-mcp-servers` (the MCP discovery index)
 
@@ -230,24 +226,25 @@ Consistent, visible release cadence signals the project is alive. The changelog 
 
 ## 4. Competitive Moats to Build
 
-| Moat                           | How to Build It                                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------------------------------- |
-| **GitHub Action distribution** | Publish to Marketplace; this is the zero-friction adoption path                                 |
-| **MCP server ecosystem**       | List on `awesome-mcp-servers`; make Claude/GPT users discover it                                |
-| **Lint compatibility**         | Be the tool that adds metadata _without breaking awesome-lint_ — occupy the gap the linter left |
-| **ecosyste.ms integration**    | Use their API to work without a GitHub token — removes the #1 setup barrier                     |
-| **Stale detection**            | No competitor does this; it's the most-felt pain point                                          |
+| Moat                            | How to Build It                                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **GitHub Action distribution**  | Publish to Marketplace; this is the zero-friction adoption path                                 |
+| **MCP server ecosystem**        | List on `awesome-mcp-servers`; make Claude/GPT users discover it                                |
+| **Lint compatibility**          | Be the tool that adds metadata _without breaking awesome-lint_ — occupy the gap the linter left |
+| **ecosyste.ms integration**     | Use their API to work without a GitHub token — removes the #1 setup barrier                     |
+| **Stale detection**             | No competitor does this; it's the most-felt pain point                                          |
+| **Redirect/transfer detection** | Detects repo transfers and renames — unique capability                                          |
 
 ---
 
 ## 5. Recommended Sequencing
 
-| Phase          | Features                                                                           | Goal                                    |
-| -------------- | ---------------------------------------------------------------------------------- | --------------------------------------- |
-| **v0.4 (Now)** | F2 (stale detection), F5 (config file), F7 (better diff), awesome-lint integration | Make the tool sticky for existing users |
-| **v0.5**       | F1 (GitHub Action), F8 (ecosyste.ms), F10 (lint compat flags)                      | Unlock GitHub Marketplace distribution  |
-| **v0.6**       | F4 (more badges), F6 (sort mode), F12 (redirect detection)                         | Broaden metadata coverage               |
-| **v1.0**       | F3 (AI descriptions), F13 (MCP improvements), F14 (examples)                       | AI-era feature set, broad awareness     |
+| Phase            | Features                                                                                                                  | Goal                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **v0.4.0 (Now)** | F2 (stale detection), F5 (config file), F7 (better diff), F10 (lint compat flags), F11 (GitLab), F12 (redirect detection) | Full-featured enrichment tool          |
+| **v0.5**         | F1 (GitHub Action), F8 (ecosyste.ms)                                                                                      | Unlock GitHub Marketplace distribution |
+| **v0.6**         | F4 (more badges), F6 (sort mode)                                                                                          | Broaden metadata coverage              |
+| **v1.0**         | F3 (AI descriptions), F13 (MCP improvements), F14 (examples)                                                              | AI-era feature set, broad awareness    |
 
 ---
 

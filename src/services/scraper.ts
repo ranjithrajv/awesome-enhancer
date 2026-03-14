@@ -40,11 +40,11 @@ export const ScraperLive: Layer.Layer<ScraperService, never, CacheService | Logg
                 headers: { 'User-Agent': 'awesome-enhancer-scraper' },
                 timeout: DEFAULT_REQUEST_TIMEOUT,
               }),
-            catch: (e: any) =>
+            catch: (e: unknown) =>
               new NetworkError({
                 url,
-                statusCode: e.response?.status,
-                message: e.message ?? String(e),
+                statusCode: (e as any)?.response?.status,
+                message: (e as any)?.message ?? String(e),
               }),
           });
 
@@ -70,46 +70,53 @@ export const ScraperLive: Layer.Layer<ScraperService, never, CacheService | Logg
         return Option.some(cleaned);
       }
 
+      function parseDescription(html: string, ...selectors: string[]): Option.Option<string> {
+        const $ = cheerio.load(html);
+        for (const selector of selectors) {
+          let description: string | undefined;
+          if (selector === 'og:description') {
+            description = $('meta[property="og:description"]').attr('content');
+          } else if (selector === 'twitter:description') {
+            description = $('meta[name="twitter:description"]').attr('content');
+          } else if (selector.startsWith('[')) {
+            description = $(selector).first().text().trim();
+          } else {
+            description = $(`meta[name="${selector}"], meta[property="${selector}"]`).attr(
+              'content',
+            );
+          }
+          if (description) {
+            return cleanDescription(description);
+          }
+        }
+        return Option.none();
+      }
+
       return {
         fetchGitHubDescription: (owner: string, repo: string) => {
           const url = `https://github.com/${owner}/${repo}`;
           return fetchHtml(url).pipe(
-            Effect.map((html) => {
-              const $ = cheerio.load(html);
-              let description = $('meta[property="og:description"]').attr('content');
-              if (!description || description.length < 10) {
-                description = $('[data-pjax="#repo-content-pjax-container"] p')
-                  .first()
-                  .text()
-                  .trim();
-              }
-              return cleanDescription(description);
-            }),
+            Effect.map((html) =>
+              parseDescription(
+                html,
+                'og:description',
+                '[data-pjax="#repo-content-pjax-container"] p',
+              ),
+            ),
           );
         },
 
         fetchGitLabDescription: (owner: string, repo: string) => {
           const url = `https://gitlab.com/${owner}/${repo}`;
-          return fetchHtml(url).pipe(
-            Effect.map((html) => {
-              const $ = cheerio.load(html);
-              const description = $('meta[name="description"]').attr('content');
-              return cleanDescription(description);
-            }),
-          );
+          return fetchHtml(url).pipe(Effect.map((html) => parseDescription(html, 'description')));
         },
 
         fetchWebsiteDescription: (url: string) => {
           if (!isValidUrl(url)) return Effect.succeed(Option.none<string>());
           return fetchHtml(url).pipe(
-            Effect.map((html) => {
-              const $ = cheerio.load(html);
-              const description =
-                $('meta[name="description"]').attr('content') ||
-                $('meta[property="og:description"]').attr('content') ||
-                $('meta[name="twitter:description"]').attr('content');
-              return cleanDescription(description);
-            }),
+            Effect.map((html) =>
+              parseDescription(html, 'description', 'og:description', 'twitter:description'),
+            ),
           );
         },
       };

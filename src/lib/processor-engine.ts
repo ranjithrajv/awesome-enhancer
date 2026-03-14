@@ -10,6 +10,7 @@ import { GitLabService } from '../services/gitlab.js';
 import { ScraperService } from '../services/scraper.js';
 import { EnhanceError, NetworkError } from '../core/errors.js';
 import { StaleEntry } from './stale-processor.js';
+import { RedirectEntry } from './redirect-processor.js';
 
 export interface LinkNode extends Node {
   type: 'link';
@@ -19,7 +20,8 @@ export interface LinkNode extends Node {
 
 export interface ProcessorResult {
   modified: boolean;
-  staleEntry?: StaleEntry; // only set by StaleProcessor
+  staleEntry?: StaleEntry;
+  redirectEntry?: RedirectEntry;
 }
 
 export interface Processor {
@@ -40,7 +42,7 @@ export class ProcessorEngine {
   process(
     content: string,
   ): Effect.Effect<
-    { content: string; staleEntries: StaleEntry[] },
+    { content: string; staleEntries: StaleEntry[]; redirectEntries: RedirectEntry[] },
     EnhanceError | NetworkError,
     LoggerService | GitHubService | GitLabService | ScraperService
   > {
@@ -57,6 +59,7 @@ export class ProcessorEngine {
       const processedRef = yield* Ref.make(0);
       const modifiedRef = yield* Ref.make(0);
       const staleEntriesRef = yield* Ref.make<StaleEntry[]>([]);
+      const redirectEntriesRef = yield* Ref.make<RedirectEntry[]>([]);
 
       const linkEffects: Effect.Effect<
         ProcessorResult,
@@ -76,6 +79,9 @@ export class ProcessorEngine {
               if (result.staleEntry !== undefined) {
                 yield* Ref.update(staleEntriesRef, (es) => [...es, result.staleEntry!]);
               }
+              if (result.redirectEntry !== undefined) {
+                yield* Ref.update(redirectEntriesRef, (es) => [...es, result.redirectEntry!]);
+              }
             }
             const processed = yield* Ref.updateAndGet(processedRef, (n) => n + 1);
             if (modified) yield* Ref.update(modifiedRef, (n) => n + 1);
@@ -85,7 +91,7 @@ export class ProcessorEngine {
                 `\r✨ Processed ${processed}/${totalLinks} links, enhanced ${modifiedCount}...`,
               );
             }
-            return { modified: modified, staleEntry: undefined };
+            return { modified: modified, staleEntry: undefined, redirectEntry: undefined };
           }),
         );
       });
@@ -94,6 +100,7 @@ export class ProcessorEngine {
       const processed = yield* Ref.get(processedRef);
       const modified = yield* Ref.get(modifiedRef);
       const staleEntries = yield* Ref.get(staleEntriesRef);
+      const redirectEntries = yield* Ref.get(redirectEntriesRef);
       yield* logger.log(`\n✅ Finished: ${processed} links analyzed, ${modified} enhanced.`);
 
       let contentString: string;
@@ -109,6 +116,7 @@ export class ProcessorEngine {
       return {
         content: contentString,
         staleEntries,
+        redirectEntries,
       };
     });
   }

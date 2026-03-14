@@ -13,6 +13,7 @@ interface CliOptions {
   addMetadata?: boolean;
   updateDescriptions?: boolean;
   detectStale?: boolean;
+  detectRedirects?: boolean;
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
@@ -32,6 +33,8 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
       options.updateDescriptions = true;
     } else if (arg === '--detect-stale') {
       options.detectStale = true;
+    } else if (arg === '--detect-redirects') {
+      options.detectRedirects = true;
     } else if (arg === '--dry-run') {
       options.dryRun = true;
     } else if (arg === '--skip-lint') {
@@ -69,6 +72,7 @@ Options:
   --add-metadata           Add GitHub repository metadata (stars, forks, language)
   --update-descriptions    Improve descriptions via web scraping
   --detect-stale           Detect archived, disabled, and deleted GitHub repositories
+  --detect-redirects       Detect repository redirects and transfers
   --output <file>          Output file (default: overwrites input)
   --dry-run                Preview changes without writing to file
   --github-token <token>   GitHub API token for higher rate limits

@@ -10,12 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Stale/Archived Repo Detection**: Added `--detect-stale` flag to detect archived, disabled, and deleted (404) GitHub repositories in awesome lists. When enabled, stale entries receive a red shields.io badge appended in-place, and a summary report is printed to stdout.
+- **Redirect/Transfer Detection**: Added `--detect-redirects` flag to detect repository transfers and renames. Makes HEAD requests to GitHub URLs to detect 301 redirects and adds badges showing "transferred" or "renamed" status.
 - **RepoMetadata Expansion**: Extended `RepoMetadata` interface with `archived: boolean` and `disabled: boolean` fields to properly type GitHub API responses.
 - **StaleProcessor**: New processor that identifies stale repositories using GitHub API signals (archived, disabled, or 404) and appends status badges.
-- **ProcessorResult Interface**: Updated processor interface to return `ProcessorResult` objects that can contain stale entry information.
-- **Idempotency Protection**: Stale detection skips entries that already have a stale badge to prevent duplication.
-- **CLI Integration**: Added `--detect-stale` flag to CLI with appropriate validation and reporting.
-- **HTTP/MCP Support**: Enhanced HTTP and MCP APIs to accept and return stale detection results.
+- **RedirectProcessor**: New processor that detects repository redirects and transfers using HEAD requests with redirect following disabled.
+- **ProcessorResult Interface**: Updated processor interface to return `ProcessorResult` objects that can contain stale entry and redirect entry information.
+- **Idempotency Protection**: Stale and redirect detection skip entries that already have respective badges to prevent duplication.
+- **CLI Integration**: Added `--detect-stale` and `--detect-redirects` flags to CLI with appropriate validation and reporting.
+- **HTTP/MCP Support**: Enhanced HTTP and MCP APIs to accept and return stale and redirect detection results.
 - **GitLab Support**: Added full GitLab support on par with GitHub. All features work with both platforms:
   - `--add-metadata`: Add stars, forks, and language badges using shields.io
   - `--update-descriptions`: Fetch and improve descriptions via web scraping

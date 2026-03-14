@@ -17,6 +17,7 @@ export interface EnhanceCommandOptions {
   addMetadata?: boolean;
   updateDescriptions?: boolean;
   detectStale?: boolean;
+  detectRedirects?: boolean;
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
@@ -57,9 +58,14 @@ export async function enhanceCommand(
       }
     }
 
-    if (!options.addMetadata && !options.updateDescriptions && !options.detectStale) {
+    if (
+      !options.addMetadata &&
+      !options.updateDescriptions &&
+      !options.detectStale &&
+      !options.detectRedirects
+    ) {
       throw new Error(
-        'Please specify at least one enhancement option: --add-metadata, --update-descriptions, or --detect-stale',
+        'Please specify at least one enhancement option: --add-metadata, --update-descriptions, --detect-stale, or --detect-redirects',
       );
     }
 
@@ -104,6 +110,7 @@ export async function enhanceCommand(
       addMetadata: options.addMetadata,
       updateDescriptions: options.updateDescriptions,
       detectStale: options.detectStale ?? false,
+      detectRedirects: options.detectRedirects ?? false,
       githubToken,
       gitlabToken,
       cacheTTL,
@@ -131,6 +138,14 @@ export async function enhanceCommand(
         }
       }
 
+      // Print redirect entries if any
+      if (result.redirectEntries.length > 0) {
+        console.log('\n🔀 Redirects detected:');
+        for (const entry of result.redirectEntries) {
+          console.log(`   • ${entry.name}  → ${entry.newUrl}  [${entry.reason}]`);
+        }
+      }
+
       console.log('\n✅ Dry-run complete. No files were modified.');
     } else {
       yield* Effect.promise(() => writeFile(outputFile, enhanced, 'utf-8'));
@@ -141,6 +156,14 @@ export async function enhanceCommand(
         console.log('\n⚠️  Stale entries detected:');
         for (const entry of result.staleEntries) {
           console.log(`   • ${entry.name}  [${entry.reason}]   ${entry.url}`);
+        }
+      }
+
+      // Print redirect entries if any
+      if (result.redirectEntries.length > 0) {
+        console.log('\n🔀 Redirects detected:');
+        for (const entry of result.redirectEntries) {
+          console.log(`   • ${entry.name}  → ${entry.newUrl}  [${entry.reason}]`);
         }
       }
     }
@@ -161,6 +184,8 @@ export async function enhanceCommand(
     EnhanceOptionsSchema.parse({
       addMetadata: options.addMetadata,
       updateDescriptions: options.updateDescriptions,
+      detectStale: options.detectStale ?? false,
+      detectRedirects: options.detectRedirects ?? false,
       githubToken: options.githubToken || config.githubToken || null,
       gitlabToken: options.gitlabToken || config.gitlabToken || null,
       cacheTTL: config.cacheTTL,

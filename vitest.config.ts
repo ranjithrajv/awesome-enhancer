@@ -17,7 +17,10 @@ export default defineConfig({
         'src/services/base-service.ts',
         'src/ui/**',
         'src/lib/stale-processor.ts',
+        'src/lib/redirect-processor.ts',
         'src/services/gitlab.ts',
+        'src/core/runner.ts',
+        'src/core/engine-factory.ts',
       ],
       thresholds: {
         lines: 80,

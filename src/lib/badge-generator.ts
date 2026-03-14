@@ -5,11 +5,9 @@ import { DEFAULT_BADGE_STYLE } from '../core/constants.js';
  */
 export class BadgeGenerator {
   private style: string;
-  private provider: 'github' | 'gitlab';
 
-  constructor(style: string = DEFAULT_BADGE_STYLE, provider: 'github' | 'gitlab' = 'github') {
+  constructor(style: string = DEFAULT_BADGE_STYLE) {
     this.style = style;
-    this.provider = provider;
   }
 
   /**
@@ -37,18 +35,12 @@ export class BadgeGenerator {
       'status-archived': `badge/status-archived-red`,
     };
 
-    const label = labels[type] || (this.provider === 'github' ? 'GitHub' : 'GitLab');
+    const label = labels[type] || 'GitHub';
     const path = paths[type];
     let url = `https://img.shields.io/${path}?style=${this.style}`;
 
-    // For GitHub badges, we need the github/ prefix
-    if (this.provider === 'github' && type !== 'status-archived') {
+    if (type !== 'status-archived') {
       url = `https://img.shields.io/github/${path}?style=${this.style}`;
-    }
-
-    // For GitLab badges, we need the gitlab/ prefix
-    if (this.provider === 'gitlab' && type !== 'status-archived') {
-      url = `https://img.shields.io/gitlab/${path}?style=${this.style}`;
     }
 
     if (useHtml) {
@@ -56,5 +48,10 @@ export class BadgeGenerator {
     }
 
     return `![${label}](${url})`;
+  }
+
+  generateRedirectBadge(label: string, owner: string, repo: string): string {
+    const url = `https://img.shields.io/badge/${label}-${owner}/${repo}-blue?style=flat-square`;
+    return `<img src="${url}" alt="${label}">`;
   }
 }

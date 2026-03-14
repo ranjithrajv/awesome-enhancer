@@ -7,6 +7,7 @@
 - 📊 **Metadata Extraction** - Automatically add GitHub/GitLab stats (stars, forks, language)
 - 📝 **Auto-describe** - Generate or improve descriptions via web scraping
 - 🛡️ **Stale Detection** - Detect archived, disabled, and deleted GitHub/GitLab repositories
+- 🔀 **Redirect Detection** - Detect repository transfers and renames
 - 🌐 **URL Support** - Enhance lists directly from GitHub or GitLab repository URLs
 - 🤖 **AI-Agent Friendly** - MCP server and HTTP API for programmatic access
 - 🖥️ **Interactive TUI** - Guided prompts for option selection
@@ -40,6 +41,7 @@ awesome-enhancer https://github.com/user/awesome-list --add-metadata --output en
 | `--add-metadata`        | Add GitHub/GitLab stars, forks, language badges            |
 | `--update-descriptions` | Improve descriptions via web scraping                      |
 | `--detect-stale`        | Detect archived, disabled, and deleted GitHub/GitLab repos |
+| `--detect-redirects`    | Detect repository transfers and renames                    |
 | `--output <file>`       | Output file path                                           |
 | `--dry-run`             | Preview without writing                                    |
 | `--skip-lint`           | Skip awesome-lint checks                                   |

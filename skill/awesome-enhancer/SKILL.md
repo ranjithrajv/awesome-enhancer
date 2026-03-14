@@ -26,6 +26,7 @@ Enhance a local markdown file.
     "add_metadata": true,
     "update_descriptions": false,
     "detect_stale": false,
+    "detect_redirects": false,
     "output_path": "path/to/output.md",
     "dry_run": false
   }
@@ -44,6 +45,7 @@ Enhance a GitHub repository's README directly.
     "add_metadata": true,
     "update_descriptions": true,
     "detect_stale": false,
+    "detect_redirects": false,
     "output_path": "enhanced.md",
     "dry_run": false
   }
@@ -62,6 +64,7 @@ Enhance a GitLab repository's README directly.
     "add_metadata": true,
     "update_descriptions": true,
     "detect_stale": false,
+    "detect_redirects": false,
     "output_path": "enhanced.md",
     "dry_run": false
   }
@@ -79,7 +82,8 @@ Enhance and get results as JSON for programmatic use.
     "file_path": "path/to/README.md",
     "add_metadata": true,
     "update_descriptions": false,
-    "detect_stale": false
+    "detect_stale": false,
+    "detect_redirects": false
   }
 }
 ```
@@ -91,6 +95,7 @@ Enhance and get results as JSON for programmatic use.
 | `add_metadata`        | Add GitHub/GitLab stars, forks, lang     | `true`           |
 | `update_descriptions` | Scrape and improve descriptions          | `false`          |
 | `detect_stale`        | Detect archived, disabled, deleted repos | `false`          |
+| `detect_redirects`    | Detect repository transfers/renames      | `false`          |
 | `output_path`         | Output file path                         | Overwrites input |
 | `dry_run`             | Preview without writing                  | `false`          |
 | `skip_lint`           | Skip awesome-lint checks                 | `false`          |
@@ -116,6 +121,12 @@ awesome-enhancer README.md --add-metadata --update-descriptions
 
 # Detect stale repositories
 awesome-enhancer README.md --detect-stale
+
+# Detect redirects and transfers
+awesome-enhancer README.md --detect-redirects
+
+# Detect both stale and redirects
+awesome-enhancer README.md --detect-stale --detect-redirects
 
 # Preview changes without writing
 awesome-enhancer README.md --add-metadata --dry-run

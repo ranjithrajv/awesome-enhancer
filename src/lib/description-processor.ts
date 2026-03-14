@@ -1,5 +1,5 @@
 import { Effect, Option } from 'effect';
-import { parseGitHubUrl, parseGitLabUrl } from '../core/utils.js';
+import { parseGitHubUrl } from '../core/utils.js';
 import { ScraperService } from '../services/scraper.js';
 import { Processor, ProcessorResult, LinkNode } from './processor-engine.js';
 import { NetworkError } from '../core/errors.js';
@@ -24,13 +24,10 @@ export class DescriptionProcessor implements Processor {
 
       const scraper = yield* ScraperService;
       const githubInfo = parseGitHubUrl(url);
-      const gitlabInfo = parseGitLabUrl(url);
 
       const descriptionEffect = githubInfo
         ? scraper.fetchGitHubDescription(githubInfo.owner, githubInfo.repo)
-        : gitlabInfo
-          ? scraper.fetchGitLabDescription(gitlabInfo.owner, gitlabInfo.repo)
-          : scraper.fetchWebsiteDescription(url);
+        : scraper.fetchWebsiteDescription(url);
 
       const newDescription = yield* descriptionEffect.pipe(
         Effect.option,

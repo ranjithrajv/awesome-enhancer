@@ -11,6 +11,7 @@ export const EnhanceOptionsSchema = z.object({
   addMetadata: z.boolean().default(false),
   updateDescriptions: z.boolean().default(false),
   detectStale: z.boolean().default(false),
+  detectRedirects: z.boolean().default(false),
   githubToken: z.string().nullable().default(null),
   gitlabToken: z.string().nullable().default(null),
   cacheTTL: z.number().default(DEFAULT_CACHE_TTL),
@@ -23,6 +24,7 @@ export const HttpEnhanceLocalSchema = z.object({
   add_metadata: z.boolean().default(true),
   update_descriptions: z.boolean().default(false),
   detect_stale: z.boolean().default(false),
+  detect_redirects: z.boolean().default(false),
   output_path: z.string().optional(),
   dry_run: z.boolean().default(false),
 });
@@ -32,6 +34,7 @@ export const HttpEnhanceGithubSchema = z.object({
   add_metadata: z.boolean().default(true),
   update_descriptions: z.boolean().default(false),
   detect_stale: z.boolean().default(false),
+  detect_redirects: z.boolean().default(false),
   output_path: z.string().default('enhanced-readme.md'),
   dry_run: z.boolean().default(false),
 });
@@ -41,6 +44,7 @@ export const HttpEnhanceGitLabSchema = z.object({
   add_metadata: z.boolean().default(true),
   update_descriptions: z.boolean().default(false),
   detect_stale: z.boolean().default(false),
+  detect_redirects: z.boolean().default(false),
   output_path: z.string().default('enhanced-readme.md'),
   dry_run: z.boolean().default(false),
 });
