@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-# Pre-commit hook that mirrors GitHub Actions CI checks
-# This ensures all CI checks pass before committing
+# Pre-commit hook — matches GitHub Actions CI (bun.yml)
+# Steps here correspond 1-to-1 with CI jobs; keep them in sync.
 
 echo "🔍 Running pre-commit checks (mirroring GitHub Actions CI)..."
 echo ""
@@ -34,6 +34,10 @@ bun run format --check
 # 7. Dead code/unused exports check (CI: code quality)
 echo "✓ Checking for unused code (knip)..."
 bunx knip --exclude dependencies,unlisted,binaries
+
+# 8. E2E smoke test (CI: bun.yml e2e job)
+echo "✓ Running E2E smoke test..."
+bun run dev --help > /dev/null
 
 echo ""
 echo "✅ All pre-commit checks passed!"
