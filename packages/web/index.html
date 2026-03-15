@@ -883,7 +883,11 @@
         if (inner.includes('404') || inner.includes('Not Found')) {
           return 'Repository not found. Check the URL and make sure the repo is public.';
         }
-        if (inner.includes('NetworkError') || inner.includes('network') || inner.includes('ENOTFOUND')) {
+        if (
+          inner.includes('NetworkError') ||
+          inner.includes('network') ||
+          inner.includes('ENOTFOUND')
+        ) {
           return 'Network error — check your internet connection and try again.';
         }
         // Fall back to the cleaned-up string
@@ -1028,7 +1032,9 @@
               this.rendered = String(marked.parse(this.content));
               this.view = 'preview';
 
-              const total = (this.content.match(/^- \[/gm) ?? []).length;
+              // Count list items containing a link — handles `- [name](url)` and
+              // `- **[name](url)**` (bold-wrapped) and `* [name](url)` variants
+              const total = (this.content.match(/^[*-] .*\[.+?\]\(https?:\/\//gm) ?? []).length;
               const issues =
                 (data.stale_entries?.length ?? 0) + (data.redirect_entries?.length ?? 0);
               const healthy = Math.max(0, total - issues);
