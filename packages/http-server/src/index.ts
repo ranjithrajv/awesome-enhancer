@@ -14,7 +14,7 @@ import { runEnhanceLocal, runEnhanceGithub, runEnhanceGitLab } from '@awesome-en
 
 const DEFAULT_PORT = 9867;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const webUiPath = resolve(__dirname, '../../web/index.html');
+const webDistDir = resolve(__dirname, '../../web/dist');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,7 +58,13 @@ const server = http.createServer(async (req, res) => {
   try {
     if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
       res.writeHead(200, { ...corsHeaders, 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
-      res.end(readFileSync(webUiPath, 'utf-8'));
+      res.end(readFileSync(resolve(webDistDir, 'index.html'), 'utf-8'));
+      return;
+    }
+
+    if (method === 'GET' && path === '/bundle.js') {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/javascript', 'Cache-Control': 'no-store' });
+      res.end(readFileSync(resolve(webDistDir, 'bundle.js')));
       return;
     }
 
