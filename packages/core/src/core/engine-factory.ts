@@ -8,6 +8,9 @@ import { DEFAULT_BADGE_STYLE } from './constants.js';
 
 export interface EngineConfig {
   addMetadata?: boolean;
+  addStars?: boolean;
+  addForks?: boolean;
+  addLastCommit?: boolean;
   updateDescriptions?: boolean;
   detectStale?: boolean;
   detectRedirects?: boolean;
@@ -17,9 +20,21 @@ export interface EngineConfig {
 export function createEngine(config: EngineConfig): ProcessorEngine {
   const engine = new ProcessorEngine();
 
-  if (config.addMetadata) {
+  const addAnyBadge =
+    config.addMetadata || config.addStars || config.addForks || config.addLastCommit;
+
+  const stars = config.addStars || config.addMetadata || false;
+  const forks = config.addForks || config.addMetadata || false;
+  const lastCommit = config.addLastCommit || config.addMetadata || false;
+
+  if (addAnyBadge) {
     engine.register(
-      new MetadataProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE)),
+      new MetadataProcessor(
+        new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE, 'github'),
+        stars,
+        forks,
+        lastCommit,
+      ),
     );
   }
 
@@ -29,13 +44,13 @@ export function createEngine(config: EngineConfig): ProcessorEngine {
 
   if (config.detectStale) {
     engine.register(
-      new StaleProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE)),
+      new StaleProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE, 'github')),
     );
   }
 
   if (config.detectRedirects) {
     engine.register(
-      new RedirectProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE)),
+      new RedirectProcessor(new BadgeGenerator(config.badgeStyle ?? DEFAULT_BADGE_STYLE, 'github')),
     );
   }
 

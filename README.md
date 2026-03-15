@@ -12,17 +12,17 @@
 
 ## Clients
 
-| Client | Package | Status |
-|--------|---------|--------|
-| **CLI** — interactive TUI + non-interactive flags | `awesome-enhancer` | ✅ Available |
-| **GitHub Action** — runs in CI, annotations + step summaries | `@awesome-enhancer/action` | ✅ Available |
-| **GitLab CI** — env-var driven, posts MR notes | `@awesome-enhancer/gitlab-ci` | ✅ Available |
-| **HTTP API** — REST server on port 9867 | `@awesome-enhancer/http-server` | ✅ Available |
-| **MCP Server** — AI agent integration (Claude, etc.) | `@awesome-enhancer/mcp-server` | ✅ Available |
-| **Web UI** — SPA served at `/ui`, Alpine.js + marked, no build | `@awesome-enhancer/web` | ✅ Available |
-| **VS Code Extension** — enhance from the editor command palette | — | 🗓️ Planned |
-| **GitHub App** — auto-enhances on schedule or PR trigger | — | 🗓️ Planned |
-| **Raycast Extension** — quick-access from macOS command palette | — | 🗓️ Planned |
+| Client                                                          | Package                         | Status       |
+| --------------------------------------------------------------- | ------------------------------- | ------------ |
+| **CLI** — interactive TUI + non-interactive flags               | `awesome-enhancer`              | ✅ Available |
+| **GitHub Action** — runs in CI, annotations + step summaries    | `@awesome-enhancer/action`      | ✅ Available |
+| **GitLab CI** — env-var driven, posts MR notes                  | `@awesome-enhancer/gitlab-ci`   | ✅ Available |
+| **HTTP API** — REST server on port 9867                         | `@awesome-enhancer/http-server` | ✅ Available |
+| **MCP Server** — AI agent integration (Claude, etc.)            | `@awesome-enhancer/mcp-server`  | ✅ Available |
+| **Web UI** — SPA served at `/ui`, Alpine.js + marked, no build  | `@awesome-enhancer/web`         | ✅ Available |
+| **VS Code Extension** — enhance from the editor command palette | —                               | 🗓️ Planned   |
+| **GitHub App** — auto-enhances on schedule or PR trigger        | —                               | 🗓️ Planned   |
+| **Raycast Extension** — quick-access from macOS command palette | —                               | 🗓️ Planned   |
 
 ## 🎯 Quick Start
 
@@ -150,7 +150,7 @@ name: Enhance awesome list
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # weekly
+    - cron: '0 0 * * 0' # weekly
   workflow_dispatch:
 
 jobs:
@@ -168,17 +168,17 @@ jobs:
 
 **Inputs:**
 
-| Input | Default | Description |
-|---|---|---|
-| `file` | `README.md` | Path to the awesome list |
-| `add-metadata` | `true` | Add stars, forks, language badges |
-| `update-descriptions` | `false` | Improve descriptions via scraping |
-| `detect-stale` | `false` | Flag archived/deleted repos |
-| `detect-redirects` | `false` | Detect URL redirects |
-| `dry-run` | `false` | Preview in step summary without writing |
-| `commit-changes` | `false` | Auto-commit and push enhanced file |
-| `commit-message` | `chore: enhance awesome list` | Commit message |
-| `github-token` | `github.token` | GitHub API token |
+| Input                 | Default                       | Description                             |
+| --------------------- | ----------------------------- | --------------------------------------- |
+| `file`                | `README.md`                   | Path to the awesome list                |
+| `add-metadata`        | `true`                        | Add stars, forks, language badges       |
+| `update-descriptions` | `false`                       | Improve descriptions via scraping       |
+| `detect-stale`        | `false`                       | Flag archived/deleted repos             |
+| `detect-redirects`    | `false`                       | Detect URL redirects                    |
+| `dry-run`             | `false`                       | Preview in step summary without writing |
+| `commit-changes`      | `false`                       | Auto-commit and push enhanced file      |
+| `commit-message`      | `chore: enhance awesome list` | Commit message                          |
+| `github-token`        | `github.token`                | GitHub API token                        |
 
 Stale and redirect findings appear as annotations in the Actions UI. Dry-run output is posted as a step summary.
 
@@ -193,10 +193,10 @@ enhance-readme:
   image: node:20-slim
   stage: enhance
   variables:
-    AE_ADD_METADATA: "true"
-    AE_DETECT_STALE: "true"
-    AE_COMMIT_CHANGES: "true"
-    AE_COMMIT_MESSAGE: "chore: enhance awesome list"
+    AE_ADD_METADATA: 'true'
+    AE_DETECT_STALE: 'true'
+    AE_COMMIT_CHANGES: 'true'
+    AE_COMMIT_MESSAGE: 'chore: enhance awesome list'
     # GL_TOKEN: set in Settings > CI/CD > Variables (write_repository scope)
   script:
     - npx @awesome-enhancer/gitlab-ci
@@ -207,16 +207,16 @@ enhance-readme:
 
 **Variables:**
 
-| Variable | Default | Description |
-|---|---|---|
-| `AE_FILE` | `README.md` | Path to the awesome list |
-| `AE_ADD_METADATA` | `true` | Add stars, forks, language badges |
-| `AE_UPDATE_DESCRIPTIONS` | `false` | Improve descriptions via scraping |
-| `AE_DETECT_STALE` | `false` | Flag archived/deleted repos |
-| `AE_DETECT_REDIRECTS` | `false` | Detect URL redirects |
-| `AE_DRY_RUN` | `false` | Preview without writing |
-| `AE_COMMIT_CHANGES` | `false` | Auto-commit and push enhanced file |
-| `AE_COMMIT_MESSAGE` | `chore: enhance awesome list` | Commit message |
+| Variable                 | Default                       | Description                        |
+| ------------------------ | ----------------------------- | ---------------------------------- |
+| `AE_FILE`                | `README.md`                   | Path to the awesome list           |
+| `AE_ADD_METADATA`        | `true`                        | Add stars, forks, language badges  |
+| `AE_UPDATE_DESCRIPTIONS` | `false`                       | Improve descriptions via scraping  |
+| `AE_DETECT_STALE`        | `false`                       | Flag archived/deleted repos        |
+| `AE_DETECT_REDIRECTS`    | `false`                       | Detect URL redirects               |
+| `AE_DRY_RUN`             | `false`                       | Preview without writing            |
+| `AE_COMMIT_CHANGES`      | `false`                       | Auto-commit and push enhanced file |
+| `AE_COMMIT_MESSAGE`      | `chore: enhance awesome list` | Commit message                     |
 
 When running in a merge request pipeline, results are automatically posted as an MR note.
 

@@ -57,13 +57,21 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
-      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
+      res.writeHead(200, {
+        ...corsHeaders,
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-store',
+      });
       res.end(readFileSync(resolve(webDistDir, 'index.html'), 'utf-8'));
       return;
     }
 
     if (method === 'GET' && path === '/bundle.js') {
-      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/javascript', 'Cache-Control': 'no-store' });
+      res.writeHead(200, {
+        ...corsHeaders,
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'no-store',
+      });
       res.end(readFileSync(resolve(webDistDir, 'bundle.js')));
       return;
     }

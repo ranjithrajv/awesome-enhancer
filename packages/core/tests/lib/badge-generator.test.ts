@@ -67,6 +67,29 @@ describe('BadgeGenerator', () => {
     });
   });
 
+  describe('GitLab platform', () => {
+    const gitlabGen = new BadgeGenerator('flat-square', 'gitlab');
+
+    it('generates GitLab stars badge', () => {
+      const badge = gitlabGen.generateBadge('stars', 'user', 'repo', true);
+      expect(badge).toBe(
+        '<img src="https://img.shields.io/gitlab/stars/user/repo?style=flat-square" alt="Stars">',
+      );
+    });
+
+    it('generates GitLab language badge using v/release path', () => {
+      const badge = gitlabGen.generateBadge('language', 'user', 'repo', true);
+      expect(badge).toContain('gitlab/v/release/user%2Frepo');
+    });
+
+    it('generates GitLab status-archived badge', () => {
+      const badge = gitlabGen.generateBadge('status-archived', 'user', 'repo', true);
+      expect(badge).toBe(
+        '<img src="https://img.shields.io/badge/status-archived-red?style=flat-square" alt="Status">',
+      );
+    });
+  });
+
   describe('status-archived badge', () => {
     it('generates status-archived badge without github prefix', () => {
       const badge = generator.generateBadge('status-archived', 'user', 'repo', true);

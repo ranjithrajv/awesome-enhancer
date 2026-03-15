@@ -42,4 +42,12 @@ export {
 } from './core/constants.js';
 
 // Re-export utils
-export { parseGitHubUrl, parseGitLabUrl, isValidUrl, formatNumber } from './core/utils.js';
+export {
+  parseGitHubUrl,
+  parseGitLabUrl,
+  isValidUrl,
+  formatNumber,
+  detectExistingBadges,
+  getMissingBadges,
+} from './core/utils.js';
+export type { BadgeType } from './core/utils.js';

@@ -45,7 +45,9 @@ function buildBrowserLayer(githubToken: string | null, gitlabToken: string | nul
 
 // ── Public API ────────────────────────────────────────────────────────────────
 export interface EnhanceOpts {
-  addMetadata?: boolean;
+  addStars?: boolean;
+  addForks?: boolean;
+  addLastCommit?: boolean;
   detectStale?: boolean;
   detectRedirects?: boolean;
   githubToken?: string;
@@ -66,7 +68,9 @@ async function runEngine(
   gitlabToken: string | null,
 ): Promise<EnhanceResult> {
   const options = EnhanceOptionsSchema.parse({
-    addMetadata: opts.addMetadata ?? false,
+    addStars: opts.addStars ?? false,
+    addForks: opts.addForks ?? false,
+    addLastCommit: opts.addLastCommit ?? false,
     updateDescriptions: false, // CORS-blocked in browser
     detectStale: opts.detectStale ?? true,
     detectRedirects: opts.detectRedirects ?? true,

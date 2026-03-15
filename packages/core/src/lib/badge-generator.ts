@@ -1,13 +1,17 @@
 import { DEFAULT_BADGE_STYLE } from '../core/constants.js';
 
+export type Platform = 'github' | 'gitlab';
+
 /**
  * BadgeGenerator handles creating shields.io badges for GitHub and GitLab
  */
 export class BadgeGenerator {
   private style: string;
+  private platform: Platform;
 
-  constructor(style: string = DEFAULT_BADGE_STYLE) {
+  constructor(style: string = DEFAULT_BADGE_STYLE, platform: Platform = 'github') {
     this.style = style;
+    this.platform = platform;
   }
 
   /**
@@ -37,10 +41,22 @@ export class BadgeGenerator {
 
     const label = labels[type];
     const path = paths[type];
-    let url = `https://img.shields.io/${path}?style=${this.style}`;
+    let url: string;
 
-    if (type !== 'status-archived') {
-      url = `https://img.shields.io/github/${path}?style=${this.style}`;
+    if (this.platform === 'gitlab') {
+      if (type === 'status-archived') {
+        url = `https://img.shields.io/badge/status-archived-red?style=${this.style}`;
+      } else if (type === 'language') {
+        url = `https://img.shields.io/gitlab/v/release/${owner}%2F${repo}?style=${this.style}`;
+      } else {
+        url = `https://img.shields.io/gitlab/${path}?style=${this.style}`;
+      }
+    } else {
+      if (type === 'status-archived') {
+        url = `https://img.shields.io/badge/status-archived-red?style=${this.style}`;
+      } else {
+        url = `https://img.shields.io/github/${path}?style=${this.style}`;
+      }
     }
 
     if (useHtml) {

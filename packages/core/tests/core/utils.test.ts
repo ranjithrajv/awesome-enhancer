@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { parseGitHubUrl, parseGitLabUrl, isValidUrl, formatNumber } from '../../src/core/utils.js';
+import {
+  parseGitHubUrl,
+  parseGitLabUrl,
+  isValidUrl,
+  formatNumber,
+  detectExistingBadges,
+  getMissingBadges,
+} from '../../src/core/utils.js';
 
 describe('parseGitHubUrl', () => {
   it('parses standard GitHub URLs', () => {
@@ -109,5 +116,94 @@ describe('parseGitLabUrl', () => {
 
   it('returns null for empty strings', () => {
     expect(parseGitLabUrl('')).toBeNull();
+  });
+});
+
+describe('detectExistingBadges', () => {
+  it('detects stars badge', () => {
+    const text =
+      '<img src="https://img.shields.io/github/stars/user/repo?style=flat-square" alt="Stars">';
+    expect(detectExistingBadges(text)).toEqual(['stars']);
+  });
+
+  it('detects forks badge', () => {
+    const text =
+      '<img src="https://img.shields.io/github/forks/user/repo?style=flat-square" alt="Forks">';
+    expect(detectExistingBadges(text)).toEqual(['forks']);
+  });
+
+  it('detects language badge', () => {
+    const text =
+      '<img src="https://img.shields.io/github/languages/top/user/repo?style=flat-square" alt="Language">';
+    expect(detectExistingBadges(text)).toEqual(['language']);
+  });
+
+  it('detects last-commit badge', () => {
+    const text =
+      '<img src="https://img.shields.io/github/last-commit/user/repo?style=flat-square" alt="Last Commit">';
+    expect(detectExistingBadges(text)).toEqual(['last-commit']);
+  });
+
+  it('detects multiple badges', () => {
+    const text =
+      '<img src="https://img.shields.io/github/stars/user/repo?style=flat-square" alt="Stars"> <img src="https://img.shields.io/github/forks/user/repo?style=flat-square" alt="Forks">';
+    expect(detectExistingBadges(text)).toEqual(['stars', 'forks']);
+  });
+
+  it('detects all four badges', () => {
+    const text =
+      '<img src="https://img.shields.io/github/stars/user/repo?style=flat-square" alt="Stars"> <img src="https://img.shields.io/github/forks/user/repo?style=flat-square" alt="Forks"> <img src="https://img.shields.io/github/languages/top/user/repo?style=flat-square" alt="Language"> <img src="https://img.shields.io/github/last-commit/user/repo?style=flat-square" alt="Last Commit">';
+    expect(detectExistingBadges(text)).toEqual(['stars', 'forks', 'language', 'last-commit']);
+  });
+
+  it('returns empty array when no badges present', () => {
+    const text = 'Just some description without badges';
+    expect(detectExistingBadges(text)).toEqual([]);
+  });
+
+  it('is case insensitive', () => {
+    const text =
+      '<IMG SRC="HTTPS://IMG.SHIELDS.IO/GITHUB/STARS/USER/REPO?STYLE=FLAT-SQUARE" ALT="Stars">';
+    expect(detectExistingBadges(text)).toEqual(['stars']);
+  });
+
+  it('detects GitLab stars badge', () => {
+    const text =
+      '<img src="https://img.shields.io/gitlab/stars/user/repo?style=flat-square" alt="Stars">';
+    expect(detectExistingBadges(text)).toEqual(['stars']);
+  });
+
+  it('detects GitLab forks badge', () => {
+    const text =
+      '<img src="https://img.shields.io/gitlab/forks/user/repo?style=flat-square" alt="Forks">';
+    expect(detectExistingBadges(text)).toEqual(['forks']);
+  });
+
+  it('detects GitLab last-commit badge', () => {
+    const text =
+      '<img src="https://img.shields.io/gitlab/last-commit/user/repo?style=flat-square" alt="Last Commit">';
+    expect(detectExistingBadges(text)).toEqual(['last-commit']);
+  });
+});
+
+describe('getMissingBadges', () => {
+  it('returns all badges when none exist', () => {
+    expect(getMissingBadges([])).toEqual(['stars', 'forks', 'language', 'last-commit']);
+  });
+
+  it('returns missing badges when some exist', () => {
+    expect(getMissingBadges(['stars'])).toEqual(['forks', 'language', 'last-commit']);
+  });
+
+  it('returns missing badges when multiple exist', () => {
+    expect(getMissingBadges(['stars', 'forks'])).toEqual(['language', 'last-commit']);
+  });
+
+  it('returns empty array when all badges exist', () => {
+    expect(getMissingBadges(['stars', 'forks', 'language', 'last-commit'])).toEqual([]);
+  });
+
+  it('handles single missing badge', () => {
+    expect(getMissingBadges(['stars', 'forks', 'language'])).toEqual(['last-commit']);
   });
 });

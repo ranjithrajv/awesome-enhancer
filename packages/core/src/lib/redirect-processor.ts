@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Effect } from 'effect';
-import { parseGitHubUrl, ensureTextNodeExists } from '../core/utils.js';
+import { parseGitHubUrl } from '../core/utils.js';
 import { BadgeGenerator } from './badge-generator.js';
 import { Processor, ProcessorResult, LinkNode } from './processor-engine.js';
 import { NetworkError } from '../core/errors.js';
@@ -41,13 +41,17 @@ export class RedirectProcessor implements Processor {
 
       if (!githubInfo) return { modified: false };
 
-      const nextNode = ensureTextNodeExists(parent, index);
-      if (nextNode.type !== 'text') return { modified: false };
-      if (
-        nextNode.value.includes('img.shields.io/badge/status-transferred') ||
-        nextNode.value.includes('img.shields.io/badge/status-renamed')
-      )
+      const nextNode = parent.children[index + 1] ?? null;
+      if (nextNode !== null && nextNode.type !== 'text' && nextNode.type !== 'html') {
         return { modified: false };
+      }
+      const existingText = nextNode?.value ?? '';
+      if (
+        existingText.includes('img.shields.io/badge/status-transferred') ||
+        existingText.includes('img.shields.io/badge/status-renamed')
+      ) {
+        return { modified: false };
+      }
 
       try {
         const response = yield* Effect.tryPromise({
@@ -91,7 +95,12 @@ export class RedirectProcessor implements Processor {
           newGithubInfo.owner,
           newGithubInfo.repo,
         );
-        nextNode.value = `${nextNode.value} ${redirectBadge}`;
+        // Use html node so remark-stringify emits the badge verbatim
+        if (nextNode?.type === 'html') {
+          nextNode.value += ' ' + redirectBadge;
+        } else {
+          parent.children.splice(index + 1, 0, { type: 'html', value: ' ' + redirectBadge });
+        }
 
         return {
           modified: true,

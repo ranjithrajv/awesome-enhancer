@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { parseGitHubUrl, ensureTextNodeExists, appendBadgeToNode } from '../core/utils.js';
+import { parseGitHubUrl } from '../core/utils.js';
 import { GitHubService } from '../services/github.js';
 import { BadgeGenerator } from './badge-generator.js';
 import { Processor, ProcessorResult, LinkNode } from './processor-engine.js';
@@ -19,38 +19,26 @@ function createStaleEntry(
   return { name, url, reason };
 }
 
-function checkAndMarkStale(
+function insertStaleBadge(
   badgeGenerator: BadgeGenerator,
-  nextNode: any,
+  parent: any,
+  index: number,
   owner: string,
   repo: string,
   url: string,
-  isArchived: boolean,
-  isDisabled: boolean,
+  reason: 'archived' | 'disabled' | 'not-found',
 ): ProcessorResult {
-  if (!isArchived && !isDisabled) return { modified: false };
-
-  const staleBadge = badgeGenerator.generateBadge('status-archived', owner, repo, false);
-  appendBadgeToNode(nextNode, staleBadge);
-
+  // Generate badge as HTML so remark-stringify emits it verbatim
+  const staleBadge = badgeGenerator.generateBadge('status-archived', owner, repo, true);
+  const nextNode = parent.children[index + 1] ?? null;
+  if (nextNode?.type === 'html') {
+    nextNode.value += ' ' + staleBadge;
+  } else {
+    parent.children.splice(index + 1, 0, { type: 'html', value: ' ' + staleBadge });
+  }
   return {
     modified: true,
-    staleEntry: createStaleEntry(`${owner}/${repo}`, url, isDisabled ? 'disabled' : 'archived'),
-  };
-}
-
-function checkNotFound(
-  badgeGenerator: BadgeGenerator,
-  nextNode: any,
-  owner: string,
-  repo: string,
-  url: string,
-): ProcessorResult {
-  const staleBadge = badgeGenerator.generateBadge('status-archived', owner, repo, false);
-  appendBadgeToNode(nextNode, staleBadge);
-  return {
-    modified: true,
-    staleEntry: createStaleEntry(`${owner}/${repo}`, url, 'not-found'),
+    staleEntry: createStaleEntry(`${owner}/${repo}`, url, reason),
   };
 }
 
@@ -73,10 +61,14 @@ export class StaleProcessor implements Processor {
 
       if (!githubInfo) return { modified: false };
 
-      const nextNode = ensureTextNodeExists(parent, index);
-      if (nextNode.type !== 'text') return { modified: false };
-      if (nextNode.value.includes('img.shields.io/badge/status-archived'))
+      // Check if a stale badge is already present in the node following this link
+      const nextNode = parent.children[index + 1] ?? null;
+      if (nextNode !== null && nextNode.type !== 'text' && nextNode.type !== 'html') {
         return { modified: false };
+      }
+      if ((nextNode?.value ?? '').includes('img.shields.io/badge/status-archived')) {
+        return { modified: false };
+      }
 
       const github = yield* GitHubService;
       const result = yield* github
@@ -86,20 +78,30 @@ export class StaleProcessor implements Processor {
       if (result._tag === 'Left') {
         const error = result.left;
         if (error.statusCode === 404) {
-          return checkNotFound(badgeGenerator, nextNode, githubInfo.owner, githubInfo.repo, url);
+          return insertStaleBadge(
+            badgeGenerator,
+            parent,
+            index,
+            githubInfo.owner,
+            githubInfo.repo,
+            url,
+            'not-found',
+          );
         }
         return { modified: false };
       }
 
       const metadata = result.right;
-      return checkAndMarkStale(
+      if (!metadata.archived && !metadata.disabled) return { modified: false };
+
+      return insertStaleBadge(
         badgeGenerator,
-        nextNode,
+        parent,
+        index,
         githubInfo.owner,
         githubInfo.repo,
         url,
-        metadata.archived,
-        metadata.disabled,
+        metadata.disabled ? 'disabled' : 'archived',
       );
     });
   }

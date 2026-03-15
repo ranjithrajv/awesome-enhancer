@@ -88,6 +88,24 @@ describe('RedirectProcessor', () => {
     expect(result.modified).toBe(false);
   });
 
+  it('appends to existing html node when one follows the link', async () => {
+    (axios.head as ReturnType<typeof vi.fn>).mockResolvedValue({
+      headers: { location: 'https://github.com/new-owner/new-repo' },
+    });
+
+    const processor = new RedirectProcessor(new BadgeGenerator());
+    const linkNode = createLinkNode('https://github.com/old-owner/old-repo');
+    const existingHtmlNode = { type: 'html', value: ' <img src="existing-badge">' };
+    const parent = { children: [linkNode, existingHtmlNode] };
+
+    const result = await Effect.runPromise(processor.execute(linkNode, parent, 0));
+
+    expect(result.modified).toBe(true);
+    expect(parent.children.length).toBe(2); // no new node spliced
+    expect(parent.children[1].value).toContain('existing-badge');
+    expect(parent.children[1].value).toContain('transferred-new-owner');
+  });
+
   it('returns modified false when network error occurs', async () => {
     (axios.head as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
 

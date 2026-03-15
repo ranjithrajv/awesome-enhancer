@@ -24,11 +24,15 @@ function log(msg: string) {
 
 function section(title: string) {
   // GitLab CI collapsible log sections
-  console.log(`\x1b[0Ksection_start:${Math.floor(Date.now() / 1000)}:${title.replace(/\s/g, '_')}\r\x1b[0K${title}`);
+  console.log(
+    `\x1b[0Ksection_start:${Math.floor(Date.now() / 1000)}:${title.replace(/\s/g, '_')}\r\x1b[0K${title}`,
+  );
 }
 
 function sectionEnd(title: string) {
-  console.log(`\x1b[0Ksection_end:${Math.floor(Date.now() / 1000)}:${title.replace(/\s/g, '_')}\r\x1b[0K`);
+  console.log(
+    `\x1b[0Ksection_end:${Math.floor(Date.now() / 1000)}:${title.replace(/\s/g, '_')}\r\x1b[0K`,
+  );
 }
 
 async function postMrNote(summary: string) {

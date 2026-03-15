@@ -60,19 +60,32 @@ export function formatNumber(num: number): string {
   return num.toString();
 }
 
-export interface TextNode {
-  type: 'text';
-  value: string;
-}
+export type BadgeType = 'stars' | 'forks' | 'language' | 'last-commit';
 
-export function ensureTextNodeExists(parent: any, index: number): TextNode {
-  if (index + 1 >= parent.children.length) {
-    const newTextNode = { type: 'text', value: '' };
-    parent.children.splice(index + 1, 0, newTextNode);
+const BADGE_PATTERNS: Record<BadgeType, RegExp> = {
+  stars: /img\.shields\.io\/(?:github|gitlab)\/stars\/[^/]+\/[^/?#]+/i,
+  forks: /img\.shields\.io\/(?:github|gitlab)\/forks\/[^/]+\/[^/?#]+/i,
+  language: /img\.shields\.io\/(?:github\/languages\/top|gitlab\/v\/release)\/[^/?#]+/i,
+  'last-commit': /img\.shields\.io\/(?:github|gitlab)\/last-commit\/[^/]+\/[^/?#]+/i,
+};
+
+/**
+ * Detect which metadata badges are already present in the text
+ */
+export function detectExistingBadges(text: string): BadgeType[] {
+  const existing: BadgeType[] = [];
+  for (const [badgeType, pattern] of Object.entries(BADGE_PATTERNS) as [BadgeType, RegExp][]) {
+    if (pattern.test(text)) {
+      existing.push(badgeType);
+    }
   }
-  return parent.children[index + 1];
+  return existing;
 }
 
-export function appendBadgeToNode(node: TextNode, badge: string): void {
-  node.value = `${node.value} ${badge}`;
+/**
+ * Get list of missing badge types
+ */
+export function getMissingBadges(existing: BadgeType[]): BadgeType[] {
+  const allBadges: BadgeType[] = ['stars', 'forks', 'language', 'last-commit'];
+  return allBadges.filter((badge) => !existing.includes(badge));
 }

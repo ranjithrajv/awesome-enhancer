@@ -613,12 +613,12 @@
           <!-- Enhancements -->
           <div class="section-title">Enhancements</div>
           <div class="options-list">
-            <!-- Add metadata: re-runs the API; disabled when all links already have badges -->
+            <!-- Add stars -->
             <label
               class="option"
-              :class="{ checked: opts.addMetadata, disabled: metadataCount === 0 }"
-              :style="metadataCount === 0 ? 'opacity:0.45;cursor:not-allowed' : ''"
-              @click.prevent="if (metadataCount !== 0) { opts.addMetadata = !opts.addMetadata; scheduleRun(); }"
+              :class="{ checked: opts.addStars, disabled: starsCount === 0 }"
+              :style="starsCount === 0 ? 'opacity:0.45;cursor:not-allowed' : ''"
+              @click.prevent="if (starsCount !== 0) { opts.addStars = !opts.addStars; scheduleRun(); }"
             >
               <div class="cb">
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
@@ -631,10 +631,60 @@
                   />
                 </svg>
               </div>
-              <span class="opt-label">Add metadata</span>
+              <span class="opt-label">Add stars badge</span>
               <span
                 class="opt-desc"
-                x-text="metadataCount < 0 ? '⭐ stars · forks · language' : metadataCount > 0 ? `⭐ ${metadataCount} links need badges` : '⭐ all links have badges'"
+                x-text="starsCount < 0 ? '⭐ Add star counts' : starsCount > 0 ? `⭐ ${starsCount} links need stars` : '⭐ all links have stars'"
+              ></span>
+            </label>
+
+            <!-- Add forks -->
+            <label
+              class="option"
+              :class="{ checked: opts.addForks, disabled: forksCount === 0 }"
+              :style="forksCount === 0 ? 'opacity:0.45;cursor:not-allowed' : ''"
+              @click.prevent="if (forksCount !== 0) { opts.addForks = !opts.addForks; scheduleRun(); }"
+            >
+              <div class="cb">
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path
+                    d="M1 3.5l2.5 2.5L8 1"
+                    stroke="#0d1117"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <span class="opt-label">Add forks badge</span>
+              <span
+                class="opt-desc"
+                x-text="forksCount < 0 ? '🍴 Add fork counts' : forksCount > 0 ? `🍴 ${forksCount} links need forks` : '🍴 all links have forks'"
+              ></span>
+            </label>
+
+            <!-- Add last commit -->
+            <label
+              class="option"
+              :class="{ checked: opts.addLastCommit, disabled: lastCommitCount === 0 }"
+              :style="lastCommitCount === 0 ? 'opacity:0.45;cursor:not-allowed' : ''"
+              @click.prevent="if (lastCommitCount !== 0) { opts.addLastCommit = !opts.addLastCommit; scheduleRun(); }"
+            >
+              <div class="cb">
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path
+                    d="M1 3.5l2.5 2.5L8 1"
+                    stroke="#0d1117"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <span class="opt-label">Add last commit badge</span>
+              <span
+                class="opt-desc"
+                x-text="lastCommitCount < 0 ? '📡 Add last commit dates' : lastCommitCount > 0 ? `📡 ${lastCommitCount} links need dates` : '📡 all links have dates'"
               ></span>
             </label>
 
@@ -718,12 +768,6 @@
           <div class="error-box" x-show="error" x-cloak>
             <span>✕</span><span x-text="error"></span>
           </div>
-
-          <!-- Download button -->
-          <button class="btn btn-primary" @click="enhance()" :disabled="loading || !content">
-            <span>⬇</span>
-            <span>Download enhanced</span>
-          </button>
         </div>
 
         <!-- ── Right: Results ── -->
@@ -853,6 +897,9 @@
                     </button>
                   </div>
                   <button class="btn btn-ghost btn-sm" @click="copyContent()">Copy</button>
+                  <button class="btn btn-ghost btn-sm" @click="enhance()" :disabled="!content">
+                    Download
+                  </button>
                 </div>
               </div>
               <div
@@ -919,7 +966,7 @@
           source: '',
           localContent: '',
           localFileName: '',
-          opts: { addMetadata: false },
+          opts: { addStars: false, addForks: false, addLastCommit: false },
           // client-side fixes applied to baseContent after a run
           fixes: { removeStale: false, replaceRedirects: false },
           githubToken: '',
@@ -933,7 +980,9 @@
           content: '', // baseContent with client-side fixes applied
           toast: '',
           evalStats: { total: 0, issues: 0, badges: 0, healthy: 0 },
-          metadataCount: -1, // -1 = not yet evaluated; >=0 = links without badges
+          starsCount: -1,
+          forksCount: -1,
+          lastCommitCount: -1, // -1 = not yet evaluated; >=0 = links without badges
           _debounce: null,
 
           async init() {
@@ -957,7 +1006,9 @@
             this.result = null;
             this.error = '';
             this.content = '';
-            this.metadataCount = -1;
+            this.starsCount = -1;
+            this.forksCount = -1;
+            this.lastCommitCount = -1;
             this.localContent = '';
             this.localFileName = '';
             this.detectMode();
@@ -997,7 +1048,9 @@
               this.result = null;
               this.error = '';
               this.content = '';
-              this.metadataCount = -1;
+              this.starsCount = -1;
+              this.forksCount = -1;
+              this.lastCommitCount = -1;
               this.run();
             };
             reader.readAsText(file);
@@ -1013,9 +1066,11 @@
 
             try {
               const opts = {
-                addMetadata: this.opts.addMetadata,
-                detectStale: true, // always detect
-                detectRedirects: true, // always detect
+                addStars: this.opts.addStars,
+                addForks: this.opts.addForks,
+                addLastCommit: this.opts.addLastCommit,
+                detectStale: true,
+                detectRedirects: true,
                 githubToken: this.githubToken || undefined,
                 gitlabToken: this.gitlabToken || undefined,
               };
@@ -1047,11 +1102,24 @@
               const healthy = Math.max(0, total - issues);
               this.evalStats = { total, issues, healthy };
 
-              // Count links that already have shields.io metadata badges
-              const withBadges = (this.content.match(/^[*-] .*shields\.io/gm) ?? []).length;
-              this.metadataCount = total - withBadges;
-              // Auto-uncheck "Add metadata" once all links already have badges
-              if (this.metadataCount === 0) this.opts.addMetadata = false;
+              // Count links that already have each badge type
+              const withStars = (
+                this.content.match(/shields\.io\/(?:github|gitlab)\/stars\//gm) ?? []
+              ).length;
+              this.starsCount = total - withStars;
+              if (this.starsCount === 0) this.opts.addStars = false;
+
+              const withForks = (
+                this.content.match(/shields\.io\/(?:github|gitlab)\/forks\//gm) ?? []
+              ).length;
+              this.forksCount = total - withForks;
+              if (this.forksCount === 0) this.opts.addForks = false;
+
+              const withLastCommit = (
+                this.content.match(/shields\.io\/(?:github|gitlab)\/last-commit\//gm) ?? []
+              ).length;
+              this.lastCommitCount = total - withLastCommit;
+              if (this.lastCommitCount === 0) this.opts.addLastCommit = false;
             } catch (e) {
               this.error = formatError(e);
             } finally {

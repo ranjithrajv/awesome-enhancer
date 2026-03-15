@@ -9,6 +9,9 @@ export const ConfigSchema = z.object({
 
 export const EnhanceOptionsSchema = z.object({
   addMetadata: z.boolean().default(false),
+  addStars: z.boolean().default(false),
+  addForks: z.boolean().default(false),
+  addLastCommit: z.boolean().default(false),
   updateDescriptions: z.boolean().default(false),
   detectStale: z.boolean().default(false),
   detectRedirects: z.boolean().default(false),
