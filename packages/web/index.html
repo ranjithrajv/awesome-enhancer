@@ -621,7 +621,13 @@
             >
               <div class="cb">
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M1 3.5l2.5 2.5L8 1"
+                    stroke="#0d1117"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <span class="opt-label">Add metadata</span>
@@ -637,11 +643,20 @@
             >
               <div class="cb">
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M1 3.5l2.5 2.5L8 1"
+                    stroke="#0d1117"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <span class="opt-label">Remove stale entries</span>
-              <span class="opt-desc" x-text="result?.stale_entries?.length ? `🪦 ${result.stale_entries.length} archived / deleted` : '🪦 none found'"></span>
+              <span
+                class="opt-desc"
+                x-text="result?.stale_entries?.length ? `🪦 ${result.stale_entries.length} archived / deleted` : '🪦 none found'"
+              ></span>
             </label>
 
             <!-- Replace redirects: client-side, enabled only when redirect entries exist -->
@@ -653,11 +668,20 @@
             >
               <div class="cb">
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M1 3.5l2.5 2.5L8 1"
+                    stroke="#0d1117"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <span class="opt-label">Replace redirected URLs</span>
-              <span class="opt-desc" x-text="result?.redirect_entries?.length ? `🔀 ${result.redirect_entries.length} renamed / transferred` : '🔀 none found'"></span>
+              <span
+                class="opt-desc"
+                x-text="result?.redirect_entries?.length ? `🔀 ${result.redirect_entries.length} renamed / transferred` : '🔀 none found'"
+              ></span>
             </label>
           </div>
 
@@ -842,6 +866,30 @@
     </div>
 
     <script>
+      // Turn Effect FiberFailure / NetworkError / plain Error into a readable string
+      function formatError(e) {
+        const s = String(e);
+        // Extract the innermost message from "(FiberFailure) NetworkError: ..."
+        const inner = s.replace(/^\(FiberFailure\)\s*/, '').trim();
+        if (inner.includes('403') || inner.includes('rate limit')) {
+          return (
+            'GitHub API rate limit exceeded (60 req/hr without a token). ' +
+            'Add a GitHub token in Advanced settings to continue.'
+          );
+        }
+        if (inner.includes('401') || inner.includes('Unauthorized')) {
+          return 'Invalid token — check your GitHub or GitLab token in Advanced settings.';
+        }
+        if (inner.includes('404') || inner.includes('Not Found')) {
+          return 'Repository not found. Check the URL and make sure the repo is public.';
+        }
+        if (inner.includes('NetworkError') || inner.includes('network') || inner.includes('ENOTFOUND')) {
+          return 'Network error — check your internet connection and try again.';
+        }
+        // Fall back to the cleaned-up string
+        return inner || s;
+      }
+
       // Extract the first markdown link URL from a line: [text](url)
       function extractUrl(line) {
         const m = line.match(/\]\((https?:\/\/[^)]+)\)/);
@@ -874,7 +922,7 @@
           view: 'preview',
           rendered: '',
           baseContent: '', // raw content from API (always with detection on)
-          content: '',     // baseContent with client-side fixes applied
+          content: '', // baseContent with client-side fixes applied
           toast: '',
           evalStats: { total: 0, issues: 0, badges: 0, healthy: 0 },
           _debounce: null,
@@ -955,8 +1003,8 @@
             try {
               const opts = {
                 addMetadata: this.opts.addMetadata,
-                detectStale: true,      // always detect
-                detectRedirects: true,  // always detect
+                detectStale: true, // always detect
+                detectRedirects: true, // always detect
                 githubToken: this.githubToken || undefined,
                 gitlabToken: this.gitlabToken || undefined,
               };
@@ -986,7 +1034,7 @@
               const healthy = Math.max(0, total - issues);
               this.evalStats = { total, issues, healthy };
             } catch (e) {
-              this.error = String(e);
+              this.error = formatError(e);
             } finally {
               this.loading = false;
             }
