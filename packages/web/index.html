@@ -610,31 +610,55 @@
             />
           </div>
 
-          <!-- Options -->
+          <!-- Enhancements -->
           <div class="section-title">Enhancements</div>
           <div class="options-list">
-            <template x-for="opt in options" :key="opt.key">
-              <label
-                class="option"
-                :class="{ checked: opts[opt.key] }"
-                @click.prevent="opts[opt.key] = !opts[opt.key]; scheduleRun()"
-              >
-                <input type="checkbox" :checked="opts[opt.key]" />
-                <div class="cb">
-                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                    <path
-                      d="M1 3.5l2.5 2.5L8 1"
-                      stroke="#0d1117"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </div>
-                <span class="opt-label" x-text="opt.label"></span>
-                <span class="opt-desc" x-text="opt.desc"></span>
-              </label>
-            </template>
+            <!-- Add metadata: re-runs the API -->
+            <label
+              class="option"
+              :class="{ checked: opts.addMetadata }"
+              @click.prevent="opts.addMetadata = !opts.addMetadata; scheduleRun()"
+            >
+              <div class="cb">
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="opt-label">Add metadata</span>
+              <span class="opt-desc">⭐ stars · forks · language</span>
+            </label>
+
+            <!-- Remove stale: client-side, enabled only when stale entries exist -->
+            <label
+              class="option"
+              :class="{ checked: fixes.removeStale, disabled: !result?.stale_entries?.length }"
+              @click.prevent="if (result?.stale_entries?.length) { fixes.removeStale = !fixes.removeStale; applyFixes(); }"
+              :style="!result?.stale_entries?.length ? 'opacity:0.45;cursor:not-allowed' : ''"
+            >
+              <div class="cb">
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="opt-label">Remove stale entries</span>
+              <span class="opt-desc" x-text="result?.stale_entries?.length ? `🪦 ${result.stale_entries.length} archived / deleted` : '🪦 none found'"></span>
+            </label>
+
+            <!-- Replace redirects: client-side, enabled only when redirect entries exist -->
+            <label
+              class="option"
+              :class="{ checked: fixes.replaceRedirects, disabled: !result?.redirect_entries?.length }"
+              @click.prevent="if (result?.redirect_entries?.length) { fixes.replaceRedirects = !fixes.replaceRedirects; applyFixes(); }"
+              :style="!result?.redirect_entries?.length ? 'opacity:0.45;cursor:not-allowed' : ''"
+            >
+              <div class="cb">
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="opt-label">Replace redirected URLs</span>
+              <span class="opt-desc" x-text="result?.redirect_entries?.length ? `🔀 ${result.redirect_entries.length} renamed / transferred` : '🔀 none found'"></span>
+            </label>
           </div>
 
           <!-- Advanced -->
@@ -707,7 +731,7 @@
                     :class="evalStats.issues > 0 ? 'c-warn' : 'c-good'"
                     x-text="evalStats.issues"
                   ></div>
-                  <div class="stat-lbl">To fix</div>
+                  <div class="stat-lbl">Issues found</div>
                 </div>
               </div>
 
@@ -765,20 +789,9 @@
                   </div>
                 </template>
 
-                <template x-for="e in scopeItems" :key="e.label">
-                  <div class="finding-row">
-                    <span class="fr-name" x-text="e.label"></span>
-                    <span
-                      class="fr-tag"
-                      style="background: rgba(88, 166, 255, 0.1); color: var(--accent)"
-                      x-text="e.flag"
-                    ></span>
-                  </div>
-                </template>
-
                 <div
                   class="finding-row"
-                  x-show="!result?.stale_entries?.length && !result?.redirect_entries?.length && !scopeItems.length"
+                  x-show="!result?.stale_entries?.length && !result?.redirect_entries?.length"
                 >
                   <span class="fr-name">Nothing to improve — the list is fully enhanced</span>
                   <span
@@ -829,6 +842,12 @@
     </div>
 
     <script>
+      // Extract the first markdown link URL from a line: [text](url)
+      function extractUrl(line) {
+        const m = line.match(/\]\((https?:\/\/[^)]+)\)/);
+        return m ? m[1] : null;
+      }
+
       function dedupeByName(entries) {
         const seen = new Set();
         return entries.filter((e) => {
@@ -844,16 +863,9 @@
           source: '',
           localContent: '',
           localFileName: '',
-          opts: {
-            addMetadata: false,
-            detectStale: true,
-            detectRedirects: true,
-          },
-          options: [
-            { key: 'addMetadata', label: 'Add metadata', desc: '⭐ stars · forks · language' },
-            { key: 'detectStale', label: 'Detect stale', desc: '🪦 archived / deleted' },
-            { key: 'detectRedirects', label: 'Detect redirects', desc: '🔀 renamed / transferred' },
-          ],
+          opts: { addMetadata: false },
+          // client-side fixes applied to baseContent after a run
+          fixes: { removeStale: false, replaceRedirects: false },
           githubToken: '',
           gitlabToken: '',
           loading: false,
@@ -861,10 +873,10 @@
           result: null,
           view: 'preview',
           rendered: '',
-          content: '',
+          baseContent: '', // raw content from API (always with detection on)
+          content: '',     // baseContent with client-side fixes applied
           toast: '',
           evalStats: { total: 0, issues: 0, badges: 0, healthy: 0 },
-          scopeItems: [],
           _debounce: null,
 
           async init() {
@@ -937,12 +949,14 @@
             clearTimeout(this._debounce);
             this.loading = true;
             this.error = '';
+            // Reset fixes on each new run
+            this.fixes = { removeStale: false, replaceRedirects: false };
 
             try {
               const opts = {
                 addMetadata: this.opts.addMetadata,
-                detectStale: this.opts.detectStale,
-                detectRedirects: this.opts.detectRedirects,
+                detectStale: true,      // always detect
+                detectRedirects: true,  // always detect
                 githubToken: this.githubToken || undefined,
                 gitlabToken: this.gitlabToken || undefined,
               };
@@ -961,6 +975,7 @@
                 data.redirect_entries = dedupeByName(data.redirect_entries);
 
               this.result = data;
+              this.baseContent = data.preview;
               this.content = data.preview;
               this.rendered = String(marked.parse(this.content));
               this.view = 'preview';
@@ -968,25 +983,33 @@
               const total = (this.content.match(/^- \[/gm) ?? []).length;
               const issues =
                 (data.stale_entries?.length ?? 0) + (data.redirect_entries?.length ?? 0);
-              const badges = (this.content.match(/shields\.io/g) ?? []).length;
               const healthy = Math.max(0, total - issues);
-              this.evalStats = { total, issues, badges, healthy };
-
-              this.scopeItems = [
-                { label: 'Add stars, forks, and language badges', flag: '--add-metadata' },
-                { label: 'Flag stale and archived repositories', flag: '--detect-stale' },
-                { label: 'Detect and update redirected URLs', flag: '--detect-redirects' },
-              ].filter((item) => {
-                if (item.flag === '--add-metadata' && this.opts.addMetadata) return false;
-                if (item.flag === '--detect-stale' && this.opts.detectStale) return false;
-                if (item.flag === '--detect-redirects' && this.opts.detectRedirects) return false;
-                return true;
-              });
+              this.evalStats = { total, issues, healthy };
             } catch (e) {
               this.error = String(e);
             } finally {
               this.loading = false;
             }
+          },
+
+          // Apply client-side fixes to baseContent and recompute rendered output
+          applyFixes() {
+            let out = this.baseContent;
+
+            if (this.fixes.removeStale && this.result?.stale_entries?.length) {
+              const lines = out.split('\n');
+              const staleUrls = new Set(this.result.stale_entries.map((e) => e.url));
+              out = lines.filter((line) => !staleUrls.has(extractUrl(line))).join('\n');
+            }
+
+            if (this.fixes.replaceRedirects && this.result?.redirect_entries?.length) {
+              for (const e of this.result.redirect_entries) {
+                out = out.replaceAll(`](${e.url})`, `](${e.newUrl})`);
+              }
+            }
+
+            this.content = out;
+            this.rendered = String(marked.parse(out));
           },
 
           enhance() {
