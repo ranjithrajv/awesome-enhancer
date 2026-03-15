@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0] - 2026-03-14
+## [0.5.0] - 2026-03-15
 
 ### Added
 
+- **GitHub Action** (`packages/action`): JavaScript action that runs on Node 20. Supports all enhancement flags, dry-run preview via step summary, automatic commit-and-push, and annotates stale/redirect findings directly in the Actions UI.
+- **GitLab CI client** (`packages/gitlab-ci`): Node.js script configured via `AE_*` environment variables. Reads GitLab CI context (`CI_*` vars), auto-posts an MR note with stale/redirect results when running in a merge request pipeline, and optionally commits enhanced output back to the branch.
 - **Visual Before/After UI**: New `BeforeAfter` component showing side-by-side comparison of content before and after enhancement in the TUI.
 - **Enhancement Statistics**: `StatsDisplay` component displaying enhancement metrics (links processed, metadata added, descriptions improved, stale repos detected).
 - **ASCII Art Banner**: Professional CLI banner displayed across all interactive screens for improved branding.

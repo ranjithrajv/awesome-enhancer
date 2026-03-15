@@ -1,0 +1,27 @@
+{
+  "name": "@awesome-enhancer/action",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "GitHub Action for enhancing awesome lists",
+  "scripts": {
+    "build": "vite build",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@awesome-enhancer/core": "workspace:*",
+    "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

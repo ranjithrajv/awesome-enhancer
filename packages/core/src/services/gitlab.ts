@@ -69,28 +69,43 @@ export const GitLabLive = (
 
       const fetchReadme = (owner: string, repo: string): Effect.Effect<string, NetworkError> => {
         return Effect.gen(function* () {
-          const path = `/projects/${encodeURIComponent(`${owner}/${repo}`)}/repository/files/README/raw?ref=master`;
-          const url = `${GITLAB_BASE}${path}`;
-          const cached = yield* cache.get<{ data: string }>(url);
-          if (Option.isSome(cached)) return cached.value.data;
+          const encoded = encodeURIComponent(`${owner}/${repo}`);
+          const candidates = [
+            `/projects/${encoded}/repository/files/README.md/raw?ref=main`,
+            `/projects/${encoded}/repository/files/README.md/raw?ref=master`,
+            `/projects/${encoded}/repository/files/README/raw?ref=main`,
+            `/projects/${encoded}/repository/files/README/raw?ref=master`,
+          ];
 
-          const response = yield* Effect.tryPromise({
-            try: () =>
-              axios.get<string>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
-            catch: (e: any) =>
-              new NetworkError({
-                url,
-                statusCode: e.response?.status,
-                message: e.message ?? String(e),
-              }),
-          }).pipe(
-            Effect.tapError((e) =>
-              logger.warn(`⚠️ [GitLabService] Failed to fetch ${url}: ${e.message}`),
-            ),
+          for (const path of candidates) {
+            const url = `${GITLAB_BASE}${path}`;
+            const cached = yield* cache.get<{ data: string }>(url);
+            if (Option.isSome(cached)) return cached.value.data;
+
+            const result = yield* Effect.tryPromise({
+              try: () =>
+                axios.get<string>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
+              catch: (e: any) =>
+                new NetworkError({
+                  url,
+                  statusCode: e.response?.status,
+                  message: e.message ?? String(e),
+                }),
+            }).pipe(Effect.option);
+
+            if (Option.isSome(result)) {
+              yield* cache.set(url, { data: result.value.data });
+              return result.value.data;
+            }
+          }
+
+          return yield* Effect.fail(
+            new NetworkError({
+              url: `${GITLAB_BASE}/projects/${encoded}/repository/files/README.md/raw`,
+              statusCode: 404,
+              message: `README not found in ${owner}/${repo} (tried main/master branches)`,
+            }),
           );
-
-          yield* cache.set(url, { data: response.data });
-          return response.data;
         });
       };
 

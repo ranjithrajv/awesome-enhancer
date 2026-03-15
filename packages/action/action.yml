@@ -1,0 +1,58 @@
+name: 'Awesome Enhancer'
+description: 'Enhance your awesome list with metadata, descriptions, stale detection, and redirect fixes'
+author: 'awesome-enhancer'
+
+branding:
+  icon: 'zap'
+  color: 'yellow'
+
+inputs:
+  file:
+    description: 'Path to the awesome list markdown file'
+    required: false
+    default: 'README.md'
+  add-metadata:
+    description: 'Add GitHub stars, forks, and language badges'
+    required: false
+    default: 'true'
+  update-descriptions:
+    description: 'Update repository descriptions via web scraping'
+    required: false
+    default: 'false'
+  detect-stale:
+    description: 'Flag archived, disabled, or deleted repositories'
+    required: false
+    default: 'false'
+  detect-redirects:
+    description: 'Detect and report URL redirects'
+    required: false
+    default: 'false'
+  output:
+    description: 'Output file path (defaults to overwriting input file)'
+    required: false
+    default: ''
+  dry-run:
+    description: 'Preview changes without writing files'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token for API requests'
+    required: false
+    default: ${{ github.token }}
+  commit-changes:
+    description: 'Commit and push enhanced file automatically'
+    required: false
+    default: 'false'
+  commit-message:
+    description: 'Commit message when commit-changes is enabled'
+    required: false
+    default: 'chore: enhance awesome list'
+
+outputs:
+  output-file:
+    description: 'Path to the enhanced output file'
+    value: ${{ steps.action.outputs.output-file }}
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

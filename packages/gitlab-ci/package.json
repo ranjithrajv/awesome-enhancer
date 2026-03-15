@@ -1,0 +1,25 @@
+{
+  "name": "@awesome-enhancer/gitlab-ci",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "GitLab CI client for enhancing awesome lists",
+  "scripts": {
+    "build": "vite build",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@awesome-enhancer/core": "workspace:*",
+    "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import http from 'http';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { ZodError } from 'zod';
 import {
   HttpEnhanceLocalSchema,
@@ -10,6 +13,8 @@ import {
 import { runEnhanceLocal, runEnhanceGithub, runEnhanceGitLab } from '@awesome-enhancer/core';
 
 const DEFAULT_PORT = 9867;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const webUiPath = resolve(__dirname, '../../web/index.html');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +56,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
+      res.end(readFileSync(webUiPath, 'utf-8'));
+      return;
+    }
+
     if (method === 'GET' && path === '/health') {
       sendJson(res, 200, { status: 'ok', name: 'awesome-enhancer' });
       return;
@@ -60,6 +71,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, {
         name: 'awesome-enhancer',
         endpoints: {
+          'GET /ui': 'Web UI',
           'POST /enhance': 'Enhance a local file or URL',
           'POST /enhance/local': 'Enhance local file',
           'POST /enhance/github': 'Enhance GitHub URL',
@@ -118,6 +130,7 @@ const server = http.createServer(async (req, res) => {
 const port = parseInt(process.env.PORT || String(DEFAULT_PORT), 10);
 server.listen(port, () => {
   console.log(`🚀 awesome-enhancer server running at http://localhost:${port}`);
+  console.log(`   GET  /ui              - Web UI`);
   console.log(`   POST /enhance/local   - Enhance local file`);
   console.log(`   POST /enhance/github  - Enhance GitHub URL`);
   console.log(`   POST /enhance/gitlab  - Enhance GitLab URL`);

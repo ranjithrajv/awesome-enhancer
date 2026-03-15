@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>awesome-enhancer</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --border:  #30363d;
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --accent:  #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger:  #f85149;
+      --radius:  8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .layout {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .logo { font-size: 17px; font-weight: 600; }
+    .logo span { color: var(--accent); }
+    .server-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+    .dot.ok  { background: var(--success); }
+    .dot.err { background: var(--danger); }
+
+    /* ── Two-column grid ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 780px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    /* ── Form ── */
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .field-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .pill { padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+    .pill-github { background: rgba(88,166,255,.12); color: var(--accent); }
+    .pill-gitlab { background: rgba(252,109,38,.12);  color: #fc6d26; }
+    .pill-local  { background: rgba(139,148,158,.12); color: var(--muted); }
+
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 9px 11px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: 'SF Mono', ui-monospace, monospace;
+      outline: none; transition: border-color .15s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    /* ── Options ── */
+    .section-title {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 8px; margin-top: 4px;
+    }
+    .options-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .option {
+      display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; transition: border-color .15s; user-select: none;
+    }
+    .option:hover { border-color: var(--muted); }
+    .option.checked { border-color: var(--accent); }
+    .option input[type="checkbox"] { display: none; }
+    .cb {
+      width: 15px; height: 15px; border: 1.5px solid var(--border); border-radius: 3px;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .option.checked .cb { background: var(--accent); border-color: var(--accent); }
+    .cb svg { display: none; }
+    .option.checked .cb svg { display: block; }
+    .opt-label { font-size: 13px; font-weight: 500; flex: 1; }
+    .opt-desc  { font-size: 11px; color: var(--muted); }
+
+    /* ── Advanced ── */
+    details { margin-bottom: 14px; }
+    summary { font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; padding: 4px 0; }
+    summary:hover { color: var(--text); }
+    .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1px solid transparent; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent); color: #0d1117; border-color: var(--accent);
+      width: 100%; justify-content: center; padding: 10px; font-size: 14px;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-ghost.active { color: var(--text); border-color: var(--accent); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.2); border-top-color: #0d1117; border-radius: 50%; animation: spin .6s linear infinite; }
+
+    /* ── Error ── */
+    .error-box {
+      display: flex; gap: 8px; padding: 10px 14px; margin-bottom: 12px;
+      background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.3);
+      border-radius: var(--radius); color: var(--danger); font-size: 13px;
+    }
+
+    /* ── Right panel ── */
+    .panel-placeholder {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 320px; gap: 10px; color: var(--muted); font-size: 13px;
+    }
+    .panel-placeholder .icon { font-size: 32px; opacity: .4; }
+
+    /* ── Eval summary ── */
+    .eval-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;
+    }
+    .stat {
+      padding: 14px 10px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); text-align: center;
+    }
+    .stat-num { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 3px; }
+    .stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+    .c-blue { color: var(--accent); }
+    .c-warn { color: var(--warning); }
+    .c-good { color: var(--success); }
+
+    /* ── Findings ── */
+    .findings { margin-bottom: 14px; }
+    .findings-hd {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 7px; display: flex; align-items: center; gap: 6px;
+    }
+    .findings-hd .cnt {
+      padding: 0 6px; border-radius: 8px; background: var(--border); color: var(--text); font-size: 11px;
+    }
+    .finding-row {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      margin-bottom: 5px; font-size: 12px; min-width: 0;
+    }
+    .fr-name { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fr-tag  { flex-shrink: 0; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .fr-url  { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+    .fr-arr  { color: var(--muted); flex-shrink: 0; }
+    .fr-new  { font-size: 11px; color: var(--accent); font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+
+    .tag-archived   { background: rgba(210,153,34,.15); color: var(--warning); }
+    .tag-not-found  { background: rgba(248,81,73,.15);  color: var(--danger); }
+    .tag-disabled   { background: rgba(139,148,158,.15); color: var(--muted); }
+    .tag-transferred, .tag-renamed { background: rgba(88,166,255,.12); color: var(--accent); }
+
+    .all-good {
+      display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+      background: rgba(63,185,80,.06); border: 1px solid rgba(63,185,80,.2);
+      border-radius: var(--radius); color: var(--success); font-size: 13px; margin-bottom: 14px;
+    }
+
+    /* ── Preview ── */
+    .preview-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
+    }
+    .preview-tabs { display: flex; gap: 6px; }
+
+    .markdown-preview {
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; overflow-x: auto; max-height: 520px; overflow-y: auto;
+    }
+    .markdown-preview h1, .markdown-preview h2, .markdown-preview h3 {
+      color: var(--text); border-bottom: 1px solid var(--border);
+      padding-bottom: 5px; margin: 18px 0 10px;
+    }
+    .markdown-preview h1:first-child { margin-top: 0; }
+    .markdown-preview a { color: var(--accent); text-decoration: none; }
+    .markdown-preview a:hover { text-decoration: underline; }
+    .markdown-preview p { margin-bottom: 8px; }
+    .markdown-preview ul { padding-left: 18px; }
+    .markdown-preview li { margin-bottom: 3px; }
+    .markdown-preview code { background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12px; }
+    .markdown-preview img { max-height: 20px; vertical-align: middle; }
+
+    pre.raw {
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px; overflow: auto; max-height: 520px;
+      font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7;
+      color: var(--text); white-space: pre-wrap; word-break: break-word;
+    }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; padding: 9px 14px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 13px; color: var(--success); box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    }
+
+    /* ── Server banner ── */
+    .server-banner {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 16px; margin-bottom: 20px;
+      background: rgba(88,166,255,.06); border: 1px solid rgba(88,166,255,.2);
+      border-radius: var(--radius); font-size: 13px; color: var(--muted); line-height: 1.5;
+    }
+    .server-banner code {
+      background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 4px;
+      font-family: ui-monospace, monospace; font-size: 12px; color: var(--text);
+    }
+
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="layout" x-data="app()">
+
+  <!-- Server setup banner (shown only when not on localhost) -->
+  <div class="server-banner" x-show="isRemote" x-cloak>
+    <span>ℹ</span>
+    <span>
+      This UI talks to a local server. Run <code>npx @awesome-enhancer/http-server</code> on your machine,
+      then set the Server URL in Advanced settings to <code>http://localhost:9867</code>.
+    </span>
+  </div>
+
+  <header>
+    <div class="logo">⚡ awesome<span>-enhancer</span></div>
+    <div class="server-status">
+      <div class="dot" :class="serverOk === true ? 'ok' : serverOk === false ? 'err' : ''"></div>
+      <span x-text="serverOk === true ? 'Server connected' : serverOk === false ? 'Server offline' : 'Connecting…'"></span>
+    </div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- ── Left: Form ── -->
+    <div class="card">
+
+      <!-- Input -->
+      <div class="field">
+        <div class="field-label">
+          Source
+          <span class="pill pill-github" x-show="mode === 'github'">GitHub</span>
+          <span class="pill pill-gitlab" x-show="mode === 'gitlab'">GitLab</span>
+          <span class="pill pill-local"  x-show="mode === 'local'">local file</span>
+        </div>
+        <input
+          x-model="source"
+          type="text"
+          placeholder="https://github.com/…  or  README.md"
+          @input="onInput()"
+          @keydown.enter="run()"
+        />
+      </div>
+
+      <!-- Options -->
+      <div class="section-title">Enhancements</div>
+      <div class="options-list">
+        <template x-for="opt in options" :key="opt.key">
+          <label class="option" :class="{ checked: opts[opt.key] }" @click="opts[opt.key] = !opts[opt.key]; scheduleRun()">
+            <input type="checkbox" :checked="opts[opt.key]" />
+            <div class="cb">
+              <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                <path d="M1 3.5l2.5 2.5L8 1" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="opt-label" x-text="opt.label"></span>
+            <span class="opt-desc"  x-text="opt.desc"></span>
+          </label>
+        </template>
+      </div>
+
+      <!-- Advanced -->
+      <details>
+        <summary>Advanced settings</summary>
+        <div class="adv-grid">
+          <div class="field" style="margin-bottom:0">
+            <div class="field-label">GitHub token</div>
+            <input type="password" x-model="githubToken" placeholder="ghp_…" @change="scheduleRun()" />
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <div class="field-label">GitLab token</div>
+            <input type="password" x-model="gitlabToken" placeholder="glpat-…" @change="scheduleRun()" />
+          </div>
+          <div class="field" style="margin-bottom:0; grid-column: span 2">
+            <div class="field-label">Server URL</div>
+            <input type="text" x-model="serverUrl" placeholder="http://localhost:9867" />
+          </div>
+        </div>
+      </details>
+
+      <!-- Error -->
+      <div class="error-box" x-show="error" x-cloak>
+        <span>✕</span><span x-text="error"></span>
+      </div>
+
+      <!-- Enhance button -->
+      <button class="btn btn-primary" @click="enhance()" :disabled="loading || !source.trim() || !content">
+        <span>⬇</span>
+        <span>Download enhanced</span>
+      </button>
+
+    </div>
+
+    <!-- ── Right: Results ── -->
+    <div>
+
+      <!-- Placeholder -->
+      <div class="card panel-placeholder" x-show="!result && !loading" x-cloak>
+        <div class="icon">⚡</div>
+        <span>Paste a URL or file path to evaluate</span>
+      </div>
+
+      <!-- Loading -->
+      <div class="card panel-placeholder" x-show="loading" x-cloak>
+        <div class="spinner" style="width:24px;height:24px;border-width:3px;border-top-color:var(--accent)"></div>
+        <span style="color:var(--muted)">Evaluating…</span>
+      </div>
+
+      <!-- Results -->
+      <div x-show="result && !loading" x-cloak>
+
+        <!-- Eval summary -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="eval-stats">
+            <div class="stat">
+              <div class="stat-num c-blue" x-text="evalStats.total"></div>
+              <div class="stat-lbl">Links found</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num c-good" x-text="evalStats.healthy"></div>
+              <div class="stat-lbl">Healthy</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num" :class="evalStats.issues > 0 ? 'c-warn' : 'c-good'" x-text="evalStats.issues"></div>
+              <div class="stat-lbl">To fix</div>
+            </div>
+          </div>
+
+            <!-- Already good -->
+          <div class="findings">
+            <div class="findings-hd">✓ Already good</div>
+            <div class="finding-row">
+              <span class="fr-name" x-text="evalStats.total > 0 ? `${evalStats.healthy} of ${evalStats.total} repositories are active and healthy` : 'No links found — check the URL or file path'"></span>
+              <span class="fr-tag" style="background:rgba(63,185,80,.12);color:var(--success)"
+                    x-text="evalStats.total > 0 && evalStats.healthy === evalStats.total ? '✓ all healthy' : `${evalStats.healthy}/${evalStats.total}`"></span>
+            </div>
+            <div class="finding-row" x-show="!result?.stale_entries?.length">
+              <span class="fr-name">No stale or archived repositories detected</span>
+              <span class="fr-tag" style="background:rgba(63,185,80,.12);color:var(--success)">✓ clean</span>
+            </div>
+            <div class="finding-row" x-show="!result?.redirect_entries?.length">
+              <span class="fr-name">All URLs are current, no redirects detected</span>
+              <span class="fr-tag" style="background:rgba(63,185,80,.12);color:var(--success)">✓ clean</span>
+            </div>
+          </div>
+
+          <!-- Scope for enhancement -->
+          <div class="findings">
+            <div class="findings-hd">✨ Scope for enhancement</div>
+
+            <template x-for="e in result?.stale_entries ?? []" :key="e.url">
+              <div class="finding-row">
+                <span class="fr-name" x-text="e.name"></span>
+                <span class="fr-tag" :class="`tag-${e.reason}`" x-text="e.reason"></span>
+                <span class="fr-url" x-text="e.url"></span>
+              </div>
+            </template>
+
+            <template x-for="e in result?.redirect_entries ?? []" :key="e.url">
+              <div class="finding-row">
+                <span class="fr-name" x-text="e.name"></span>
+                <span class="fr-tag" :class="`tag-${e.reason}`" x-text="e.reason"></span>
+                <span class="fr-url" x-text="e.url"></span>
+                <span class="fr-arr">→</span>
+                <span class="fr-new" x-text="e.newUrl"></span>
+              </div>
+            </template>
+
+            <template x-for="e in scopeItems" :key="e.label">
+              <div class="finding-row">
+                <span class="fr-name" x-text="e.label"></span>
+                <span class="fr-tag" style="background:rgba(88,166,255,.1);color:var(--accent)" x-text="e.flag"></span>
+              </div>
+            </template>
+
+            <div class="finding-row" x-show="!result?.stale_entries?.length && !result?.redirect_entries?.length && !scopeItems.length">
+              <span class="fr-name">Nothing to improve — the list is fully enhanced</span>
+              <span class="fr-tag" style="background:rgba(63,185,80,.12);color:var(--success)">✓ complete</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="card">
+          <div class="preview-header">
+            <span style="font-size:13px;font-weight:600;">Enhanced preview</span>
+            <div style="display:flex;gap:6px;">
+              <div class="preview-tabs">
+                <button class="btn btn-ghost btn-sm" :class="{ active: view === 'preview' }" @click="view = 'preview'">Preview</button>
+                <button class="btn btn-ghost btn-sm" :class="{ active: view === 'raw' }"     @click="view = 'raw'">Raw</button>
+              </div>
+              <button class="btn btn-ghost btn-sm" @click="copyContent()">Copy</button>
+            </div>
+          </div>
+
+          <div class="markdown-preview" x-show="view === 'preview'" x-effect="if (rendered) $el.innerHTML = rendered"></div>
+          <pre class="raw" x-show="view === 'raw'" x-text="content"></pre>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" x-show="toast" x-text="toast" x-cloak></div>
+
+</div>
+<script>
+  function dedupeByName(entries) {
+    const seen = new Set();
+    return entries.filter(e => {
+      if (seen.has(e.name)) return false;
+      seen.add(e.name);
+      return true;
+    });
+  }
+
+  function app() {
+    return {
+      mode: 'github',
+      source: '',
+      opts: {
+        addMetadata:        false,
+        updateDescriptions: false,
+        detectStale:        true,
+        detectRedirects:    true,
+      },
+      options: [
+        { key: 'addMetadata',        label: 'Add metadata',        desc: '⭐ stars · forks · language' },
+        { key: 'updateDescriptions', label: 'Update descriptions', desc: '📝 via web scraping' },
+        { key: 'detectStale',        label: 'Detect stale',        desc: '🪦 archived / deleted' },
+        { key: 'detectRedirects',    label: 'Detect redirects',    desc: '🔀 renamed / transferred' },
+      ],
+      githubToken: '',
+      gitlabToken: '',
+      serverUrl: 'http://localhost:9867',
+      loading: false,
+      error: '',
+      result: null,
+      view: 'preview',
+      rendered: '',
+      content: '',
+      serverOk: null,
+      toast: '',
+      isRemote: false,
+      evalStats: { total: 0, issues: 0, badges: 0, healthy: 0 },
+      scopeItems: [],
+      _debounce: null,
+
+      async init() {
+        marked.use({ gfm: true, breaks: false });
+        this.isRemote = !['localhost', '127.0.0.1', ''].includes(location.hostname);
+        await this.ping();
+      },
+
+      detectMode() {
+        const v = this.source.trim();
+        if (v.includes('github.com'))                              this.mode = 'github';
+        else if (v.includes('gitlab.com') || v.includes('gitlab.')) this.mode = 'gitlab';
+        else if (v.startsWith('http'))                             this.mode = 'github';
+        else                                                       this.mode = 'local';
+      },
+
+      isReady() {
+        const v = this.source.trim();
+        return (this.mode !== 'local' && v.startsWith('http') && v.length > 15)
+            || (this.mode === 'local'  && v.length > 0);
+      },
+
+      onInput() {
+        this.result  = null;
+        this.error   = '';
+        this.content = '';
+        this.detectMode();
+        // Shorter delay when value looks like a full URL (paste), longer when typing
+        const delay = this.isReady() && this.source.trim().length > 20 ? 300 : 900;
+        clearTimeout(this._debounce);
+        this._debounce = setTimeout(() => { if (this.isReady()) this.run(); }, delay);
+      },
+
+      scheduleRun() {
+        clearTimeout(this._debounce);
+        this._debounce = setTimeout(() => { if (this.isReady()) this.run(); }, 300);
+      },
+
+      endpoint() {
+        return this.mode === 'github' ? '/enhance/github'
+             : this.mode === 'gitlab' ? '/enhance/gitlab'
+             : '/enhance/local';
+      },
+
+      buildBody(extraOpts = {}) {
+        const o = { ...this.opts, ...extraOpts };
+        const base = {
+          add_metadata:        o.addMetadata,
+          update_descriptions: o.updateDescriptions,
+          detect_stale:        o.detectStale,
+          detect_redirects:    o.detectRedirects,
+          dry_run:             true,
+        };
+        if (this.githubToken) base.github_token = this.githubToken;
+        if (this.gitlabToken) base.gitlab_token = this.gitlabToken;
+        if (this.mode === 'github') return { ...base, github_url: this.source.trim() };
+        if (this.mode === 'gitlab') return { ...base, gitlab_url: this.source.trim() };
+        return { ...base, file_path: this.source.trim() };
+      },
+
+      async run() {
+        if (!this.isReady() || this.loading) return;
+        clearTimeout(this._debounce);
+        this.loading = true;
+        this.error   = '';
+
+        try {
+          const res  = await fetch(`${this.serverUrl}${this.endpoint()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.buildBody()),
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            this.error = data.error || `Server error (${res.status})`;
+            return;
+          }
+
+          // Deduplicate entries — backend returns one row per URL variant (stargazers, network, etc.)
+          if (data.stale_entries)    data.stale_entries    = dedupeByName(data.stale_entries);
+          if (data.redirect_entries) data.redirect_entries = dedupeByName(data.redirect_entries);
+
+          this.result   = data;
+          this.content  = data.preview ?? data.enhanced_content ?? '';
+          this.rendered = String(marked.parse(this.content));
+          this.view     = 'preview';
+
+          const total   = (this.content.match(/^- \[/gm) ?? []).length;
+          const issues  = (data.stale_entries?.length ?? 0) + (data.redirect_entries?.length ?? 0); // already deduped
+          const badges  = (this.content.match(/shields\.io/g) ?? []).length;
+          const healthy = Math.max(0, total - issues);
+          this.evalStats = { total, issues, badges, healthy };
+
+          this.scopeItems = [
+            { label: 'Add stars, forks, and language badges',   flag: '--add-metadata' },
+            { label: 'Improve descriptions via web scraping',   flag: '--update-descriptions' },
+            { label: 'Flag stale and archived repositories',    flag: '--detect-stale' },
+            { label: 'Detect and update redirected URLs',       flag: '--detect-redirects' },
+          ].filter(item => {
+            if (item.flag === '--add-metadata'        && this.opts.addMetadata)        return false;
+            if (item.flag === '--update-descriptions' && this.opts.updateDescriptions) return false;
+            if (item.flag === '--detect-stale'        && this.opts.detectStale)        return false;
+            if (item.flag === '--detect-redirects'    && this.opts.detectRedirects)    return false;
+            return true;
+          });
+
+        } catch (e) {
+          this.error = String(e).includes('fetch')
+            ? `Cannot reach server at ${this.serverUrl}. Is awesome-enhancer-server running?`
+            : String(e);
+          if (this.error.includes('Cannot reach')) this.serverOk = false;
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // Enhance = download the enhanced file
+      enhance() {
+        if (!this.content) return;
+        const blob = new Blob([this.content], { type: 'text/markdown' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'enhanced-readme.md';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast('Downloaded');
+      },
+
+      async copyContent() {
+        await navigator.clipboard.writeText(this.content);
+        this.showToast('Copied to clipboard');
+      },
+
+      async ping() {
+        try { this.serverOk = (await fetch(`${this.serverUrl}/health`)).ok; }
+        catch { this.serverOk = false; }
+      },
+
+      showToast(msg) { this.toast = msg; setTimeout(() => this.toast = '', 2500); },
+    };
+  }
+</script>
+</body>
+</html>
