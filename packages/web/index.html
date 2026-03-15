@@ -617,7 +617,7 @@
               <label
                 class="option"
                 :class="{ checked: opts[opt.key] }"
-                @click="opts[opt.key] = !opts[opt.key]; scheduleRun()"
+                @click.prevent="opts[opt.key] = !opts[opt.key]; scheduleRun()"
               >
                 <input type="checkbox" :checked="opts[opt.key]" />
                 <div class="cb">
