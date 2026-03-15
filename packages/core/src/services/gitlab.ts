@@ -32,7 +32,7 @@ export const GitLabLive = (
     GitLabService,
     Effect.gen(function* () {
       const cache = yield* CacheService;
-      const logger = yield* LoggerService;
+      const _logger = yield* LoggerService;
       const rateLimitRef = yield* Ref.make<Option.Option<string>>(Option.none());
 
       const authHeaders = (): Record<string, string> => {
@@ -84,7 +84,10 @@ export const GitLabLive = (
 
             const result = yield* Effect.tryPromise({
               try: () =>
-                axios.get<string>(url, { headers: authHeaders(), timeout: DEFAULT_REQUEST_TIMEOUT }),
+                axios.get<string>(url, {
+                  headers: authHeaders(),
+                  timeout: DEFAULT_REQUEST_TIMEOUT,
+                }),
               catch: (e: any) =>
                 new NetworkError({
                   url,

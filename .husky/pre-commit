@@ -11,20 +11,20 @@ echo ""
 echo "✓ Checking version consistency..."
 bun --filter='@awesome-enhancer/core' run check-version
 
-# 2. Tests (CI: bun.yml) - using Vite+ vp command with coverage
+# 2. Tests (CI: bun.yml)
 echo "✓ Running tests with coverage..."
-vp test run --coverage
+bun run test:coverage
 
 # 3. Type checking (CI: bun.yml, release.yml)
 echo "✓ Running typecheck..."
 bun run typecheck
 
-# 4. Linting (CI: bun.yml, release.yml) - using Vite+ vp command
+# 4. Linting (CI: bun.yml, release.yml)
 echo "✓ Running lint..."
-vp lint
+bun run lint:all
 
-# 5. Build (CI: bun.yml, release.yml) - using Vite+ vite build
-echo "✓ Running build..."
+# 5. Build + bundle verification (CI: bun.yml, pages.yml)
+echo "✓ Running build (includes web bundle verification)..."
 bun run build
 
 # 6. Formatting check (CI: implicit in code quality)
