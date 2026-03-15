@@ -613,11 +613,12 @@
           <!-- Enhancements -->
           <div class="section-title">Enhancements</div>
           <div class="options-list">
-            <!-- Add metadata: re-runs the API -->
+            <!-- Add metadata: re-runs the API; disabled when all links already have badges -->
             <label
               class="option"
-              :class="{ checked: opts.addMetadata }"
-              @click.prevent="opts.addMetadata = !opts.addMetadata; scheduleRun()"
+              :class="{ checked: opts.addMetadata, disabled: metadataCount === 0 }"
+              :style="metadataCount === 0 ? 'opacity:0.45;cursor:not-allowed' : ''"
+              @click.prevent="if (metadataCount !== 0) { opts.addMetadata = !opts.addMetadata; scheduleRun(); }"
             >
               <div class="cb">
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
@@ -631,7 +632,10 @@
                 </svg>
               </div>
               <span class="opt-label">Add metadata</span>
-              <span class="opt-desc">⭐ stars · forks · language</span>
+              <span
+                class="opt-desc"
+                x-text="metadataCount < 0 ? '⭐ stars · forks · language' : metadataCount > 0 ? `⭐ ${metadataCount} links need badges` : '⭐ all links have badges'"
+              ></span>
             </label>
 
             <!-- Remove stale: client-side, enabled only when stale entries exist -->
@@ -929,6 +933,7 @@
           content: '', // baseContent with client-side fixes applied
           toast: '',
           evalStats: { total: 0, issues: 0, badges: 0, healthy: 0 },
+          metadataCount: -1, // -1 = not yet evaluated; >=0 = links without badges
           _debounce: null,
 
           async init() {
@@ -952,6 +957,7 @@
             this.result = null;
             this.error = '';
             this.content = '';
+            this.metadataCount = -1;
             this.localContent = '';
             this.localFileName = '';
             this.detectMode();
@@ -991,6 +997,7 @@
               this.result = null;
               this.error = '';
               this.content = '';
+              this.metadataCount = -1;
               this.run();
             };
             reader.readAsText(file);
@@ -1039,6 +1046,12 @@
                 (data.stale_entries?.length ?? 0) + (data.redirect_entries?.length ?? 0);
               const healthy = Math.max(0, total - issues);
               this.evalStats = { total, issues, healthy };
+
+              // Count links that already have shields.io metadata badges
+              const withBadges = (this.content.match(/^[*-] .*shields\.io/gm) ?? []).length;
+              this.metadataCount = total - withBadges;
+              // Auto-uncheck "Add metadata" once all links already have badges
+              if (this.metadataCount === 0) this.opts.addMetadata = false;
             } catch (e) {
               this.error = formatError(e);
             } finally {
