@@ -128,6 +128,14 @@
     "packages/web": {
       "name": "@awesome-enhancer/web",
       "version": "0.4.0",
+      "dependencies": {
+        "@awesome-enhancer/core": "workspace:*",
+        "effect": "^3.19.19",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+        "vite": "latest",
+      },
     },
   },
   "packages": {

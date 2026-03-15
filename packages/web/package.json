@@ -2,5 +2,19 @@
   "name": "@awesome-enhancer/web",
   "version": "0.4.0",
   "description": "Web UI for enhancing awesome lists",
-  "license": "AGPL-3.0-or-later"
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@awesome-enhancer/core": "workspace:*",
+    "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "latest"
+  }
 }
