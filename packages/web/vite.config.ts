@@ -15,8 +15,15 @@ export default defineConfig({
       output: { entryFileNames: 'bundle.js' },
     },
   },
+  define: {
+    // dotenv.config() is called at module level in config.ts — stub process so it doesn't throw
+    'process.env.NODE_ENV': '"production"',
+    'process.env': '({})',
+    'process.cwd': '(() => "/")',
+  },
   resolve: {
     alias: {
+      dotenv: resolve(__dirname, 'src/shims/empty.js'),
       'fs/promises': resolve(__dirname, 'src/shims/empty.js'),
       fs: resolve(__dirname, 'src/shims/empty.js'),
       path: resolve(__dirname, 'src/shims/empty.js'),
