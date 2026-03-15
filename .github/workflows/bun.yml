@@ -44,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Build core (required for web typecheck)
+        run: bun run --filter='@awesome-enhancer/core' build
+
       - name: Run tests
         run: bun run test:coverage
 
@@ -143,6 +146,7 @@ jobs:
       - name: Test global installation simulation
         if: matrix.os != 'windows-latest'
         run: |
+          cd packages/cli
           bun link
           awesome-enhancer --help
           bun unlink
