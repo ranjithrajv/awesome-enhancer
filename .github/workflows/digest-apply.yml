@@ -22,7 +22,7 @@ on:
     inputs:
       issue-number:
         description: Digest issue to read ticked candidates from.
-        type: number
+        type: string
         required: true
       base-branch:
         description: Branch the pull request targets.

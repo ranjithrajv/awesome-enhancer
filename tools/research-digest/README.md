@@ -101,9 +101,14 @@ jobs:
       || (contains(github.event.issue.labels.*.name, 'research') && github.event.issue.state == 'open')
     uses: ranjithrajv/awesome-enhancer/.github/workflows/digest-apply.yml@main
     with:
-      issue-number: ${{ github.event.issue.number || inputs.issue_number }}
+      issue-number: ${{ format('{0}', inputs.issue_number || github.event.issue.number) }}
     secrets: inherit
 ```
+
+> A dispatch input arrives as a string while `github.event.issue.number` is a
+> number, so pass it through `format()` and keep the reusable workflow's
+> `issue-number` typed as a string — a bare `type: number` mismatch makes the
+> run fail to start with `Unexpected value '17'`.
 
 > The repository must allow Actions to open pull requests:
 > **Settings → Actions → General → Workflow permissions →
