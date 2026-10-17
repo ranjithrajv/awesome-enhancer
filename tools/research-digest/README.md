@@ -17,11 +17,11 @@ tools/research-digest/
 
 The reusable workflows live in `../../.github/workflows/`:
 
-| Workflow | Purpose |
-| --- | --- |
-| `research-digest.yml` | Scans sources, opens the weekly digest issue with tick-boxes. |
-| `digest-apply.yml` | Reads ticked items from an issue and opens a PR. |
-| `research-digest-tests.yml` | Lints and tests this tool. |
+| Workflow                    | Purpose                                                       |
+| --------------------------- | ------------------------------------------------------------- |
+| `research-digest.yml`       | Scans sources, opens the weekly digest issue with tick-boxes. |
+| `digest-apply.yml`          | Reads ticked items from an issue and opens a PR.              |
+| `research-digest-tests.yml` | Lints and tests this tool.                                    |
 
 ## Sources
 
@@ -64,7 +64,7 @@ on:
 permissions:
   contents: read
   issues: write
-  models: read          # lets GITHUB_TOKEN call GitHub Models
+  models: read # lets GITHUB_TOKEN call GitHub Models
 
 jobs:
   digest:
@@ -134,41 +134,41 @@ Unticking and re-editing updates the same branch and PR.
 All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 `digest_config.example.json` for a complete example.
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `list_description` | `""` | Prompt context for the LLM relevance check. |
-| `keywords` | `[]` | Substring match for RSS and Product Hunt. |
-| `days_back` | `14` | Lookback window. |
-| `max_llm_candidates` | `25` | Candidates sent to the LLM and shown. |
-| `max_per_source` | `12` | Per-source cap before merging. |
-| `per_source_caps` | `{}` | Per-source override, e.g. `{"Reddit": 6}`. |
-| `source_weights` | `{}` | Per-source multiplier, e.g. `{"RSS": 0.8}`. |
-| `half_life_days` | `21` | Freshness decay half-life. |
-| `keyword_gate` | `["Hacker News", "Bluesky", "Mastodon"]` | Sources whose candidates must mention one of `keywords` in the title or description. Free-text sources are noisy without a relevance model. |
-| `request_delay` | `1.0` | Seconds between requests to Reddit and Mastodon, which answer 429 when hammered. |
-| `sections` | `[]` | Allowed sections; empty means auto-detect `##` headings from `README.md`. |
-| `default_section` | `""` | Fallback when the LLM cannot pick a section. |
-| `readme_files` | `["README.md"]` | Files scanned for headings. |
-| `hn_queries`, `min_hn_points` | `[]`, `3` | Hacker News queries. |
-| `github_queries`, `min_github_stars` | `[]`, `5` | GitHub search queries (supports `created:` filters). |
-| `github_topics` | `[]` | GitHub `topic:` searches, not date-restricted. |
-| `reddit_subreddits` | `[]` | Subreddits via the public Atom feed (`.rss`); the `.json` API blocks unauthenticated hosts. |
-| `lobsters_tags`, `min_lobsters_score` | `[]`, `5` | Lobsters tag feeds (`/t/<tag>.json`), filtered by `keywords`. `/search.json` rejects all query parameters. |
-| `arxiv_queries` | `[]` | arXiv `search_query` strings. Spaces must be `+` (the tool encodes them); prefer broad `all:"..."` over narrow `cat:` intersections. |
-| `mastodon_instances`, `mastodon_tags` | `[]`, `[]` | Instance × tag timelines. |
-| `bluesky_queries` | `[]` | Bluesky post search via `api.bsky.app` (`public.api.bsky.app` returns 403). |
-| `rss_feeds` | `[]` | RSS or Atom feed URLs. |
-| `producthunt` | `true` | Enabled only when `PRODUCTHUNT_TOKEN` is set. |
-| `llm.model` | `openai/gpt-4o-mini` | Model id. |
+| Key                                   | Default                                  | Meaning                                                                                                                                     |
+| ------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_description`                    | `""`                                     | Prompt context for the LLM relevance check.                                                                                                 |
+| `keywords`                            | `[]`                                     | Substring match for RSS and Product Hunt.                                                                                                   |
+| `days_back`                           | `14`                                     | Lookback window.                                                                                                                            |
+| `max_llm_candidates`                  | `25`                                     | Candidates sent to the LLM and shown.                                                                                                       |
+| `max_per_source`                      | `12`                                     | Per-source cap before merging.                                                                                                              |
+| `per_source_caps`                     | `{}`                                     | Per-source override, e.g. `{"Reddit": 6}`.                                                                                                  |
+| `source_weights`                      | `{}`                                     | Per-source multiplier, e.g. `{"RSS": 0.8}`.                                                                                                 |
+| `half_life_days`                      | `21`                                     | Freshness decay half-life.                                                                                                                  |
+| `keyword_gate`                        | `["Hacker News", "Bluesky", "Mastodon"]` | Sources whose candidates must mention one of `keywords` in the title or description. Free-text sources are noisy without a relevance model. |
+| `request_delay`                       | `1.0`                                    | Seconds between requests to Reddit and Mastodon, which answer 429 when hammered.                                                            |
+| `sections`                            | `[]`                                     | Allowed sections; empty means auto-detect `##` headings from `README.md`.                                                                   |
+| `default_section`                     | `""`                                     | Fallback when the LLM cannot pick a section.                                                                                                |
+| `readme_files`                        | `["README.md"]`                          | Files scanned for headings.                                                                                                                 |
+| `hn_queries`, `min_hn_points`         | `[]`, `3`                                | Hacker News queries.                                                                                                                        |
+| `github_queries`, `min_github_stars`  | `[]`, `5`                                | GitHub search queries (supports `created:` filters).                                                                                        |
+| `github_topics`                       | `[]`                                     | GitHub `topic:` searches, not date-restricted.                                                                                              |
+| `reddit_subreddits`                   | `[]`                                     | Subreddits via the public Atom feed (`.rss`); the `.json` API blocks unauthenticated hosts.                                                 |
+| `lobsters_tags`, `min_lobsters_score` | `[]`, `5`                                | Lobsters tag feeds (`/t/<tag>.json`), filtered by `keywords`. `/search.json` rejects all query parameters.                                  |
+| `arxiv_queries`                       | `[]`                                     | arXiv `search_query` strings. Spaces must be `+` (the tool encodes them); prefer broad `all:"..."` over narrow `cat:` intersections.        |
+| `mastodon_instances`, `mastodon_tags` | `[]`, `[]`                               | Instance × tag timelines.                                                                                                                   |
+| `bluesky_queries`                     | `[]`                                     | Bluesky post search via `api.bsky.app` (`public.api.bsky.app` returns 403).                                                                 |
+| `rss_feeds`                           | `[]`                                     | RSS or Atom feed URLs.                                                                                                                      |
+| `producthunt`                         | `true`                                   | Enabled only when `PRODUCTHUNT_TOKEN` is set.                                                                                               |
+| `llm.model`                           | `openai/gpt-4o-mini`                     | Model id.                                                                                                                                   |
 
 ### Credentials
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `GITHUB_TOKEN` | yes (Actions) | GitHub search and issue de-duplication. |
-| `LLM_API_KEY` | no | Enables LLM ranking against any OpenAI-compatible endpoint. |
-| `LLM_BASE_URL` | no | Endpoint base. Defaults to `https://models.github.ai/inference`. |
-| `PRODUCTHUNT_TOKEN` | no | Enables the Product Hunt source. |
+| Variable            | Required      | Purpose                                                          |
+| ------------------- | ------------- | ---------------------------------------------------------------- |
+| `GITHUB_TOKEN`      | yes (Actions) | GitHub search and issue de-duplication.                          |
+| `LLM_API_KEY`       | no            | Enables LLM ranking against any OpenAI-compatible endpoint.      |
+| `LLM_BASE_URL`      | no            | Endpoint base. Defaults to `https://models.github.ai/inference`. |
+| `PRODUCTHUNT_TOKEN` | no            | Enables the Product Hunt source.                                 |
 
 The digest works with no LLM at all — ranking then uses the per-source
 normalisation described above. To turn the model pass on, either set
@@ -185,14 +185,14 @@ rankings, and the run emits a warning annotation.
 These are the behaviours the sources work around. Keep them in mind when
 changing a source; each was found by testing against the live endpoint.
 
-| Endpoint | Observed behaviour | How it is handled |
-| --- | --- | --- |
-| `models.github.ai/inference/*` | HTTP 200 with a `text/plain` body of `OK` for every path, both locally and from a hosted runner holding `models: read` | LLM ranking is opt-in and reports the failure in the digest |
-| `lobste.rs/search.json?q=…` | HTTP 400 "Unpermitted query or form parameter" for every parameter combination tried | use tag feeds `/t/<tag>.json`, filtered by `keywords` |
-| `reddit.com/r/<sub>/new.json` | HTTP 403 "Blocked" for unauthenticated clients | use the public Atom feed `/<sub>/.rss` (no vote counts available) |
-| `public.api.bsky.app/…/searchPosts` | HTTP 403 with an HTML error page | use `api.bsky.app` |
-| `export.arxiv.org/api/query` | HTTP 400 when spaces are encoded as `%20` | encode spaces as `+` |
-| `phys.org`-style news feeds | often no keyword matches in a two-week window | expected: an empty digest is a valid result |
+| Endpoint                            | Observed behaviour                                                                                                     | How it is handled                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `models.github.ai/inference/*`      | HTTP 200 with a `text/plain` body of `OK` for every path, both locally and from a hosted runner holding `models: read` | LLM ranking is opt-in and reports the failure in the digest       |
+| `lobste.rs/search.json?q=…`         | HTTP 400 "Unpermitted query or form parameter" for every parameter combination tried                                   | use tag feeds `/t/<tag>.json`, filtered by `keywords`             |
+| `reddit.com/r/<sub>/new.json`       | HTTP 403 "Blocked" for unauthenticated clients                                                                         | use the public Atom feed `/<sub>/.rss` (no vote counts available) |
+| `public.api.bsky.app/…/searchPosts` | HTTP 403 with an HTML error page                                                                                       | use `api.bsky.app`                                                |
+| `export.arxiv.org/api/query`        | HTTP 400 when spaces are encoded as `%20`                                                                              | encode spaces as `+`                                              |
+| `phys.org`-style news feeds         | often no keyword matches in a two-week window                                                                          | expected: an empty digest is a valid result                       |
 
 ## Running locally
 

@@ -221,22 +221,20 @@ describe('MetadataProcessor', () => {
     const parent = createParent(linkNode);
 
     const result = await Effect.runPromise(
-      processor
-        .execute(linkNode, parent, 0)
-        .pipe(
-          Effect.provide(
-            makeGitHubLayer({ stargazers_count: 100 }).pipe(
-              Layer.merge(
-                makeGitLabLayer({
-                  stars: 100,
-                  forks: 10,
-                  language: 'Go',
-                  lastCommit: '2024-01-01',
-                }),
-              ),
+      processor.execute(linkNode, parent, 0).pipe(
+        Effect.provide(
+          makeGitHubLayer({ stargazers_count: 100 }).pipe(
+            Layer.merge(
+              makeGitLabLayer({
+                stars: 100,
+                forks: 10,
+                language: 'Go',
+                lastCommit: '2024-01-01',
+              }),
             ),
           ),
         ),
+      ),
     );
 
     expect(result.modified).toBe(true);

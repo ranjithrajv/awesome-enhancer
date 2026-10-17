@@ -35,7 +35,7 @@ on:
       default-section:
         description: Section used when a checked candidate has no suggested section.
         type: string
-        default: ""
+        default: ''
       dry-run:
         description: Print the diff instead of opening a pull request.
         type: boolean

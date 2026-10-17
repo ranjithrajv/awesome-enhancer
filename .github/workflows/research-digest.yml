@@ -25,7 +25,7 @@ on:
       model:
         description: Override the LLM model id (default from config, else openai/gpt-4o-mini).
         type: string
-        default: ""
+        default: ''
       use-github-models:
         description: Rank with the built-in token against GitHub Models. Off by default; see the tool README.
         type: boolean
