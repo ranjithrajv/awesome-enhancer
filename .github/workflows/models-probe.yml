@@ -1,0 +1,32 @@
+name: Models Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe GitHub Models inference API
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "--- GET /inference/models (with token) ---"
+          curl -sS -w "\nstatus=%{http_code} ct=%{content_type}\n" \
+            -H "Authorization: Bearer $TOKEN" \
+            https://models.github.ai/inference/models | head -c 800
+          echo
+          echo "--- POST /inference/chat/completions (with token) ---"
+          curl -sS -w "\nstatus=%{http_code} ct=%{content_type}\n" \
+            -X POST https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' \
+            | head -c 800
+          echo
+          echo "--- resolved host ---"
+          getent hosts models.github.ai || true
