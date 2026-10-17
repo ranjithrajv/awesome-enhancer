@@ -365,7 +365,7 @@ def test_fetch_lobsters_is_a_noop_without_tags():
 REDDIT_ATOM = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
   <entry><title>New BOINC project</title>
     <link href="https://www.reddit.com/r/BOINC/comments/x/new/"/>
-    <content type="html">&lt;p&gt;a volunteer computing project&lt;/p&gt;</content>
+    <content type="html">&lt;p&gt;a volunteer computing project&lt;/p&gt; submitted by /u/someone [link] [comments]</content>
     <updated>2026-10-10T00:00:00Z</updated></entry>
   <entry><title>Off topic</title>
     <link href="https://www.reddit.com/r/BOINC/comments/y/off/"/>
@@ -389,6 +389,8 @@ def test_fetch_reddit_reads_the_atom_feed(monkeypatch):
     assert len(out) == 1
     assert out[0].url == "https://reddit.com/r/BOINC/comments/x/new"  # www. normalised away
     assert out[0].published == "2026-10-10"
+    assert "submitted by" not in out[0].description  # feed boilerplate stripped
+    assert out[0].description == "a volunteer computing project"
 
 
 def test_fetch_bluesky_uses_the_read_host(monkeypatch):

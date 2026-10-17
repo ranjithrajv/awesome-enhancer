@@ -44,6 +44,10 @@ DEFAULT_TIMEOUT = 25
 RETRIES = 3
 URL_RE = re.compile(r"https?://[^\s\)>\]\"'<]+")
 
+# Reddit's Atom feed appends "submitted by /u/x [link] [comments]" to the body,
+# which has no place in a list entry description.
+REDDIT_TRAILER_RE = re.compile(r"\s*submitted by\s+/u/\S+.*$", re.I | re.S)
+
 # Query parameters stripped while normalising URLs for de-duplication.
 TRACKING_PARAMS = {
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
@@ -521,6 +525,7 @@ def fetch_reddit(cfg: dict, ctx: Context) -> list:
             title = _atom_or_rss_text(entry, "title")
             link = _atom_or_rss_link(entry)
             body = _strip_html(_atom_or_rss_text(entry, "content"))
+            body = REDDIT_TRAILER_RE.sub("", body).strip()
             published = _parse_date(_atom_or_rss_text(entry, "updated")
                                     or _atom_or_rss_text(entry, "published"))
             if not _valid_url(link):
