@@ -414,6 +414,18 @@ def strip_payloads(body: str) -> str:
     return re.sub(r"<!--\s*digest-payload\s*\{.*?\}\s*-->\s*", "", body or "", flags=re.S)
 
 
+PREVIOUS_WEEKS_RE = re.compile(
+    r"<details>\s*<summary>Previous weeks \(\d+\)</summary>\s*|\s*</details>\s*",
+    re.I,
+)
+
+
+def flatten_previous_weeks(body: str) -> str:
+    """Unwrap previous-weeks <details> wrappers so history stays one level deep."""
+    text = PREVIOUS_WEEKS_RE.sub("\n", body or "")
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def merge_issue_body(existing: str, new_week: str, keep: int = 6) -> str:
     """New week on top, previous weeks collapsed and stripped of their payloads.
 
@@ -421,7 +433,7 @@ def merge_issue_body(existing: str, new_week: str, keep: int = 6) -> str:
     always reads exactly one set of candidates.
     """
     new_week = new_week.strip()
-    previous = strip_payloads(existing).strip()
+    previous = flatten_previous_weeks(strip_payloads(existing))
     if not previous:
         return new_week + "\n"
     weeks = [w.strip() for w in re.split(r"\n(?=# Research digest )", previous) if w.strip()]

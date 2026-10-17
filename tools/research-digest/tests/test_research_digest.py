@@ -529,6 +529,21 @@ def test_strip_payloads_removes_every_block():
     assert "x" in out and "z" in out
 
 
+def test_history_does_not_nest_across_weeks():
+    def week(day: str) -> str:
+        return (f"# Research digest — {day}\n\n- [ ] **A**\n\n"
+                f'<!-- digest-payload\n{{"version": 2, "candidates": []}}\n-->\n')
+
+    merged = rd.merge_issue_body(week("2026-10-05"), week("2026-10-12"))
+    merged = rd.merge_issue_body(merged, week("2026-10-19"))
+    merged = rd.merge_issue_body(merged, week("2026-10-26"))
+
+    assert merged.count("<details>") == 1          # flat, never nested
+    assert merged.count("Previous weeks") == 1
+    assert "Previous weeks (3)" in merged
+    assert merged.count("digest-payload") == 1
+
+
 # --------------------------------------------------------------------------- #
 # Reddit OAuth
 # --------------------------------------------------------------------------- #
