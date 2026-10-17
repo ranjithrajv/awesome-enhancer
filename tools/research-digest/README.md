@@ -83,6 +83,11 @@ name: Digest Apply
 on:
   issues:
     types: [edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Digest issue number whose ticked candidates to apply
+        required: true
 
 permissions:
   contents: write
@@ -91,12 +96,21 @@ permissions:
 
 jobs:
   apply:
-    if: contains(github.event.issue.labels.*.name, 'research') && github.event.issue.state == 'open'
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (contains(github.event.issue.labels.*.name, 'research') && github.event.issue.state == 'open')
     uses: ranjithrajv/awesome-enhancer/.github/workflows/digest-apply.yml@main
     with:
-      issue-number: ${{ github.event.issue.number }}
+      issue-number: ${{ github.event.issue.number || inputs.issue_number }}
     secrets: inherit
 ```
+
+> The repository must allow Actions to open pull requests:
+> **Settings → Actions → General → Workflow permissions →
+> "Allow GitHub Actions to create and approve pull requests".**
+> Without it the push succeeds but `gh pr create` fails with
+> `GitHub Actions is not permitted to create or approve pull requests`.
+> Set `base-branch` when the default branch is not `main`.
 
 ### From a digest issue to a merge
 
