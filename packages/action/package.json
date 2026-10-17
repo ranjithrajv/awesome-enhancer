@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
+    "@actions/exec": "^3.0.0",
     "@awesome-enhancer/core": "workspace:*",
     "effect": "^3.19.19"
   },
