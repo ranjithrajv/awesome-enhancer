@@ -11,7 +11,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vp build",
     "dev": "bun run src/index.tsx",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",

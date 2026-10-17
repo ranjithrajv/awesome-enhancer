@@ -16,9 +16,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
-    "dev": "vite --mode development",
-    "test": "vitest run",
+    "build": "vp build",
+    "dev": "vp dev --mode development",
+    "test": "vp test run",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",

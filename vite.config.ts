@@ -1,19 +1,11 @@
-import { defineConfig } from 'vite';
-import dts from 'vite-plugin-dts';
+import { defineConfig } from 'vite-plus';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [
-    dts({
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.tsx', 'tests/**'],
-      tsconfigPath: './tsconfig.build.json',
-    }),
-  ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      formats: ['esm'],
+      formats: ['es'],
     },
     outDir: 'dist/src',
     minify: false,
@@ -53,7 +45,32 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
-    exclude: ['tests/e2e/**'],
+    include: ['tests/**/*.test.ts', 'packages/core/tests/**/*.test.ts'],
+    exclude: ['tests/e2e/**', 'packages/core/tests/e2e/**'],
+    coverage: {
+      provider: 'v8',
+      include: ['packages/core/src/**/*.ts'],
+      exclude: [
+        'packages/core/src/types/**',
+        'packages/core/src/index.ts',
+        'packages/core/src/commands/**',
+        'packages/core/src/services/git.ts',
+        'packages/core/src/services/base-service.ts',
+        'packages/core/src/ui/**',
+        'packages/core/src/lib/stale-processor.ts',
+        'packages/core/src/lib/redirect-processor.ts',
+        'packages/core/src/services/gitlab.ts',
+        'packages/core/src/core/runner.ts',
+        'packages/core/src/core/engine-factory.ts',
+        'packages/core/src/core/config.ts',
+        'packages/core/src/core/errors.ts',
+      ],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        branches: 100,
+        statements: 100,
+      },
+    },
   },
 });
