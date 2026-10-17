@@ -114,6 +114,16 @@ def test_insert_into_section_returns_unchanged_for_no_entries():
     assert "- [Existing](https://existing.example)" in new_text
 
 
+def test_insert_only_adds_a_line_and_keeps_the_trailing_newlines():
+    text = "# List\n\n## Projects\n\n- [a](https://a.example) - a.\n\n\n"
+    entry = "- [b](https://b.example) - b."
+    new_text, created = ad.insert_into_section(text, "Projects", [entry])
+
+    assert created is False
+    assert new_text.endswith("\n\n\n")                     # tail untouched
+    assert new_text.replace(entry + "\n", "") == text      # nothing else changed
+
+
 def test_insert_resolves_heading_without_emoji():
     text = "# List\n\n## 📚 Contents\n\n## 🧪 Projects\n\n- [a](https://a.example) - a.\n"
     new_text, created = ad.insert_into_section(text, "Projects", ["- [b](https://b.example) - b."])

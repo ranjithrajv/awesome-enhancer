@@ -86,7 +86,9 @@ def insert_into_section(text: str, section: str, entries: list) -> tuple:
     Returns ``(new_text, created_section)``. A section with no match is
     appended at the end of the document.
     """
-    lines = text.splitlines()
+    # split("\n")/join("\n") round-trips the file byte for byte, so anything
+    # other than the inserted lines shows up as a diff.
+    lines = text.split("\n")
     headings = [(index, len(match.group(1)), match.group(2).strip())
                 for index, line in enumerate(lines)
                 if (match := HEADING_RE.match(line))]
@@ -119,9 +121,10 @@ def insert_into_section(text: str, section: str, entries: list) -> tuple:
     while insert_at - 1 > start and lines[insert_at - 1].strip() == "":
         insert_at -= 1
 
-    tail = [""] if end < len(lines) else []
-    new_lines = lines[:insert_at] + list(entries) + tail + lines[insert_at:]
-    return "\n".join(new_lines).rstrip("\n") + "\n", False
+    # Insert after the last content line of the section, leaving any existing
+    # blank separator before the next heading exactly as it was.
+    new_lines = lines[:insert_at] + list(entries) + lines[insert_at:]
+    return "\n".join(new_lines), False
 
 
 def _preview(before: str, after: str, name: str) -> str:
