@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * audit-gate — fail on new advisories, tolerate a documented allowlist.
+ * audit-gate - fail on new advisories, tolerate a documented allowlist.
  *
  * `bun audit` alone is all-or-nothing: two unfixable advisories in the tree
  * would force the threshold down to `critical`, where it stops catching
@@ -74,7 +74,7 @@ export function render(result, level) {
       lines.push(`| ${f.package} | ${f.severity} | ${f.id} | \`${f.versions}\` |`);
     lines.push('');
   } else {
-    lines.push('No unallowlisted advisories at or above the threshold. ✅', '');
+    lines.push('No unallowlisted advisories at or above the threshold. ok', '');
   }
 
   if (tolerated.length) {
@@ -86,7 +86,7 @@ export function render(result, level) {
 
   if (stale.length) {
     lines.push(
-      `> ${stale.length} allowlist entr${stale.length === 1 ? 'y is' : 'ies are'} no longer reported — ` +
+      `> ${stale.length} allowlist entr${stale.length === 1 ? 'y is' : 'ies are'} no longer reported - ` +
         `remove ${stale.length === 1 ? 'it' : 'them'} from .github/audit-allowlist.json.`,
       '',
     );
