@@ -20,7 +20,7 @@
   "dependencies": {
     "@awesome-enhancer/core": "workspace:*",
     "awesome-lint": "^2.2.3",
-    "effect": "^3.19.19",
+    "effect": "^4.0.4",
     "ink": "^6.8.0",
     "ink-select-input": "^6.2.0",
     "react": "^19.2.4"
