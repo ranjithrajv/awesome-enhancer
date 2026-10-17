@@ -1,0 +1,138 @@
+name: Digest Apply
+
+# Reusable workflow: turns the ticked candidates of a digest issue into a pull
+# request. Call it from a list repository with
+#
+#   on:
+#     issues:
+#       types: [edited]
+#
+#   jobs:
+#     apply:
+#       if: contains(github.event.issue.labels.*.name, 'research')
+#       uses: ranjithrajv/awesome-enhancer/.github/workflows/digest-apply.yml@main
+#       with:
+#         issue-number: ${{ github.event.issue.number }}
+#       secrets: inherit
+#
+# The caller job must grant: contents: write, issues: write, pull-requests: write.
+
+on:
+  workflow_call:
+    inputs:
+      issue-number:
+        description: Digest issue to read ticked candidates from.
+        type: number
+        required: true
+      base-branch:
+        description: Branch the pull request targets.
+        type: string
+        default: main
+      target-file:
+        description: Markdown file to edit, relative to the repository root.
+        type: string
+        default: README.md
+      default-section:
+        description: Section used when a checked candidate has no suggested section.
+        type: string
+        default: ""
+      dry-run:
+        description: Print the diff instead of opening a pull request.
+        type: boolean
+        default: false
+      engine-repository:
+        description: Repository that holds the digest engine.
+        type: string
+        default: ranjithrajv/awesome-enhancer
+      engine-ref:
+        description: Ref of the engine repository to run.
+        type: string
+        default: main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout list repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.base-branch }}
+          fetch-depth: 0
+
+      - name: Checkout digest engine
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ inputs.engine-repository }}
+          ref: ${{ inputs.engine-ref }}
+          path: .digest-engine
+
+      - name: Read issue body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue view "${{ inputs.issue-number }}" --json body --jq .body \
+            > "$RUNNER_TEMP/issue.md"
+
+      - name: Apply ticked candidates
+        id: apply
+        run: |
+          python3 .digest-engine/tools/research-digest/apply_digest.py \
+            --root . \
+            --body-file "$RUNNER_TEMP/issue.md" \
+            --file "${{ inputs.target-file }}" \
+            --default-section "${{ inputs.default-section }}" \
+            --apply \
+            --report "$RUNNER_TEMP/apply.json" \
+            --github-output
+
+      - name: Open pull request
+        if: ${{ !inputs.dry-run && steps.apply.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          branch="digest/issue-${{ inputs.issue-number }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+
+          while IFS= read -r file; do
+            [ -n "$file" ] && git add -- "$file"
+          done < <(jq -r '.changed[]' "$RUNNER_TEMP/apply.json")
+
+          if git diff --cached --quiet; then
+            echo "::notice::Nothing to commit"
+            exit 0
+          fi
+
+          entries=$(jq -r '.entries' "$RUNNER_TEMP/apply.json")
+          git commit -m "chore(digest): add ${entries} candidate(s) from #${{ inputs.issue-number }}"
+          if ! git push -u origin "$branch"; then
+            git push --force -u origin "$branch"
+          fi
+
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            echo "::notice::Updated existing pull request for $branch"
+          else
+            gh pr create \
+              --base "${{ inputs.base-branch }}" \
+              --head "$branch" \
+              --title "Add research digest candidates (#${{ inputs.issue-number }})" \
+              --body "Applies the candidates ticked in #${{ inputs.issue-number }}. Review each entry before merging."
+          fi
+
+      - name: Comment on the issue
+        if: ${{ !inputs.dry-run && steps.apply.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          entries=$(jq -r '.entries' "$RUNNER_TEMP/apply.json")
+          gh issue comment "${{ inputs.issue-number }}" --body \
+            "Applied ${entries} candidate(s) to \`${{ inputs.target-file }}\` on branch \`digest/issue-${{ inputs.issue-number }}\`."

@@ -1,0 +1,41 @@
+{
+  "list_description": "Awesome Example curates tools, libraries, and projects for doing a thing. Replace this sentence with a description of your list; the LLM uses it to judge relevance.",
+  "keywords": ["example keyword", "another keyword"],
+
+  "days_back": 14,
+  "max_llm_candidates": 25,
+  "max_per_source": 12,
+  "per_source_caps": { "Reddit": 6 },
+  "source_weights": { "RSS": 0.8, "Hacker News": 1.2 },
+  "half_life_days": 21,
+
+  "sections": [],
+  "default_section": "",
+  "readme_files": ["README.md"],
+
+  "hn_queries": ["example keyword"],
+  "min_hn_points": 5,
+
+  "github_queries": ["example keyword"],
+  "github_topics": ["example-topic"],
+  "min_github_stars": 5,
+
+  "reddit_subreddits": ["example"],
+  "min_reddit_score": 5,
+
+  "lobsters_queries": ["example keyword"],
+  "min_lobsters_score": 5,
+
+  "arxiv_queries": ["cat:cs.DC AND all:\"example keyword\""],
+
+  "mastodon_instances": ["fosstodon.org"],
+  "mastodon_tags": ["example"],
+
+  "bluesky_queries": ["example keyword"],
+
+  "rss_feeds": ["https://example.com/feed.xml"],
+
+  "producthunt": true,
+
+  "llm": { "model": "openai/gpt-4o-mini" }
+}

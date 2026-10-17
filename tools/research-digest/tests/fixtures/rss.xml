@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test Feed</title>
+    <link>https://example.org/</link>
+    <description>A feed used by the research digest tests.</description>
+    <item>
+      <title>BOINC adds a new volunteer computing project</title>
+      <link>https://example.org/boinc-news?utm_source=rss&amp;utm_medium=feed</link>
+      <description><![CDATA[<p>A new <b>volunteer computing</b> project joins the network.</p>]]></description>
+      <pubDate>Mon, 06 Oct 2026 09:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Unrelated post about gardening</title>
+      <link>https://example.org/gardening</link>
+      <description>Nothing in this item matches the configured keywords.</description>
+      <pubDate>Mon, 06 Oct 2026 09:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

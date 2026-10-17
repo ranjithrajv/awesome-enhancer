@@ -1,0 +1,124 @@
+name: Research Digest
+
+# Reusable workflow: call it from a list repository with
+#
+#   jobs:
+#     digest:
+#       uses: ranjithrajv/awesome-enhancer/.github/workflows/research-digest.yml@main
+#       with:
+#         config-path: .github/research-digest.json
+#       secrets: inherit
+#
+# The caller job must grant: contents: read, issues: write, models: read.
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to the digest config, relative to the caller repository.
+        type: string
+        default: .github/research-digest.json
+      days-back:
+        description: Lookback window in days. 0 uses the value from the config.
+        type: number
+        default: 0
+      model:
+        description: Override the LLM model id (default from config, else openai/gpt-4o-mini).
+        type: string
+        default: ""
+      label:
+        description: Label applied to the digest issue, also used for dedupe history.
+        type: string
+        default: research
+      dry-run:
+        description: Scan and write the summary but do not open an issue.
+        type: boolean
+        default: false
+      engine-repository:
+        description: Repository that holds the digest engine.
+        type: string
+        default: ranjithrajv/awesome-enhancer
+      engine-ref:
+        description: Ref of the engine repository to run.
+        type: string
+        default: main
+    secrets:
+      LLM_API_KEY:
+        description: Optional external LLM key. Falls back to the built-in GITHUB_TOKEN.
+        required: false
+      PRODUCTHUNT_TOKEN:
+        description: Optional Product Hunt token. Product Hunt is skipped without it.
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: research-digest-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout list repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Checkout digest engine
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ inputs.engine-repository }}
+          ref: ${{ inputs.engine-ref }}
+          path: .digest-engine
+
+      - name: Scan sources for candidate projects
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GitHub Models accepts the built-in token once `models: read` is granted,
+          # so no secret is needed. An explicit key still wins when set.
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.GITHUB_TOKEN }}
+          LLM_BASE_URL: https://models.github.ai/inference
+          LLM_MODEL: ${{ inputs.model }}
+          PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
+          DIGEST_LABEL: ${{ inputs.label }}
+        run: |
+          python3 .digest-engine/tools/research-digest/research_digest.py \
+            --root . \
+            --config "${{ inputs.config-path }}" \
+            --days-back "${{ inputs.days-back }}" \
+            --label "${{ inputs.label }}" \
+            --out "$RUNNER_TEMP/digest.md" \
+            --json "$RUNNER_TEMP/digest.json" \
+            --github-output
+
+      - name: Add job summary
+        if: always()
+        run: |
+          if [ -s "$RUNNER_TEMP/digest.md" ]; then
+            cat "$RUNNER_TEMP/digest.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload digest artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: research-digest
+          path: ${{ runner.temp }}/digest.md
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Open digest issue
+        if: ${{ !inputs.dry-run && steps.scan.outputs.candidates != '0' && steps.scan.outputs.candidates != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "${{ inputs.label }}" \
+            --color 1D76DB --description "Auto-generated research digest" --force || true
+          gh issue create \
+            --title "[auto] Research digest $(date -u +%Y-%m-%d)" \
+            --body-file "$RUNNER_TEMP/digest.md" \
+            --label "${{ inputs.label }}"
