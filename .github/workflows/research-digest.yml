@@ -9,7 +9,9 @@ name: Research Digest
 #         config-path: .github/research-digest.json
 #       secrets: inherit
 #
-# The caller job must grant: contents: read, issues: write, models: read.
+# The caller job must grant: contents: write, issues: write, models: read.
+# contents: write is needed to commit the digest state file that records which
+# candidates were accepted or rejected.
 
 on:
   workflow_call:
@@ -25,19 +27,19 @@ on:
       model:
         description: Override the LLM model id (default from config, else openai/gpt-4o-mini).
         type: string
-        default: ''
-      use-github-models:
-        description: Rank with the built-in token against GitHub Models. Off by default; see the tool README.
-        type: boolean
-        default: false
+        default: ""
       label:
         description: Label applied to the digest issue, also used for dedupe history.
         type: string
         default: research
       dry-run:
-        description: Scan and write the summary but do not open an issue.
+        description: Scan and summarise without writing state or touching the issue.
         type: boolean
         default: false
+      state-path:
+        description: Where accepted/rejected history is stored in the caller repository.
+        type: string
+        default: .github/research-digest-state.json
       engine-repository:
         description: Repository that holds the digest engine.
         type: string
@@ -53,9 +55,15 @@ on:
       PRODUCTHUNT_TOKEN:
         description: Optional Product Hunt token. Product Hunt is skipped without it.
         required: false
+      REDDIT_CLIENT_ID:
+        description: Reddit app id for application-only OAuth. Without it Reddit uses the Atom feed.
+        required: false
+      REDDIT_CLIENT_SECRET:
+        description: Reddit app secret for application-only OAuth.
+        required: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   models: read
 
@@ -77,19 +85,33 @@ jobs:
           ref: ${{ inputs.engine-ref }}
           path: .digest-engine
 
+      - name: Find the open digest issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          number=$(gh issue list --label "${{ inputs.label }}" --state open \
+            --limit 1 --json number --jq '.[0].number // ""')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          : > "$RUNNER_TEMP/existing.md"
+          if [ -n "$number" ]; then
+            gh issue view "$number" --json body --jq .body > "$RUNNER_TEMP/existing.md"
+          fi
+
       - name: Scan sources for candidate projects
         id: scan
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GitHub Models is opt-in. When tested (locally and on a hosted runner)
-          # models.github.ai answered every request with a text/plain "OK" stub,
-          # so the default is heuristic ranking. Set use-github-models, or set
-          # LLM_API_KEY to use any OpenAI-compatible endpoint.
-          LLM_API_KEY: ${{ inputs.use-github-models && secrets.GITHUB_TOKEN || secrets.LLM_API_KEY }}
+          # GitHub Models is opt-in: in testing models.github.ai answered every
+          # request with a text/plain "OK" stub, so the default is the built-in
+          # lexical ranking. Set LLM_API_KEY for any OpenAI-compatible endpoint.
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: https://models.github.ai/inference
           LLM_MODEL: ${{ inputs.model }}
           PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           DIGEST_LABEL: ${{ inputs.label }}
         run: |
           python3 .digest-engine/tools/research-digest/research_digest.py \
@@ -97,6 +119,8 @@ jobs:
             --config "${{ inputs.config-path }}" \
             --days-back "${{ inputs.days-back }}" \
             --label "${{ inputs.label }}" \
+            --state "${{ inputs.state-path }}" \
+            --merge-into "$RUNNER_TEMP/existing.md" \
             --out "$RUNNER_TEMP/digest.md" \
             --json "$RUNNER_TEMP/digest.json" \
             --github-output
@@ -117,14 +141,34 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      - name: Open digest issue
+      - name: Commit digest state
+        if: ${{ !inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- "${{ inputs.state-path }}")" ]; then
+            echo "::notice::Digest state unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "${{ inputs.state-path }}"
+          git commit -m "chore(digest): update research state [skip ci]"
+          git push
+
+      - name: Open or update the digest issue
         if: ${{ !inputs.dry-run && steps.scan.outputs.candidates != '0' && steps.scan.outputs.candidates != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh label create "${{ inputs.label }}" \
             --color 1D76DB --description "Auto-generated research digest" --force || true
-          gh issue create \
-            --title "[auto] Research digest $(date -u +%Y-%m-%d)" \
-            --body-file "$RUNNER_TEMP/digest.md" \
-            --label "${{ inputs.label }}"
+          number="${{ steps.issue.outputs.number }}"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/digest.md"
+            echo "::notice::Updated the rolling digest issue #$number"
+          else
+            gh issue create \
+              --title "[auto] Research digest $(date -u +%Y-%m-%d)" \
+              --body-file "$RUNNER_TEMP/digest.md" \
+              --label "${{ inputs.label }}"
+          fi

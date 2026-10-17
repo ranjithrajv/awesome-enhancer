@@ -8,6 +8,11 @@
   "per_source_caps": { "Reddit": 6 },
   "source_weights": { "RSS": 0.8, "Hacker News": 1.2 },
   "half_life_days": 21,
+  "relevance_weight": 0.35,
+  "relevance_high": 0.45,
+  "relevance_medium": 0.28,
+  "state_file": ".github/research-digest-state.json",
+  "resurface_boost": 1.25,
 
   "sections": [],
   "default_section": "",

@@ -1,18 +1,24 @@
 name: Digest Apply
 
 # Reusable workflow: turns the ticked candidates of a digest issue into a pull
-# request. Call it from a list repository with
+# request, and records accepts/rejects in the digest state file. Call it from a
+# list repository with
 #
 #   on:
 #     issues:
 #       types: [edited]
+#     workflow_dispatch:
+#       inputs:
+#         issue_number: { required: true }
 #
 #   jobs:
 #     apply:
-#       if: contains(github.event.issue.labels.*.name, 'research')
+#       if: >-
+#         github.event_name == 'workflow_dispatch'
+#         || (contains(github.event.issue.labels.*.name, 'research') && github.event.issue.state == 'open')
 #       uses: ranjithrajv/awesome-enhancer/.github/workflows/digest-apply.yml@main
 #       with:
-#         issue-number: ${{ github.event.issue.number }}
+#         issue-number: ${{ format('{0}', inputs.issue_number || github.event.issue.number) }}
 #       secrets: inherit
 #
 # The caller job must grant: contents: write, issues: write, pull-requests: write.
@@ -35,7 +41,11 @@ on:
       default-section:
         description: Section used when a checked candidate has no suggested section.
         type: string
-        default: ''
+        default: ""
+      state-path:
+        description: Where accepted/rejected history is stored in the caller repository.
+        type: string
+        default: .github/research-digest-state.json
       dry-run:
         description: Print the diff instead of opening a pull request.
         type: boolean
@@ -87,6 +97,7 @@ jobs:
             --body-file "$RUNNER_TEMP/issue.md" \
             --file "${{ inputs.target-file }}" \
             --default-section "${{ inputs.default-section }}" \
+            --state "${{ inputs.state-path }}" \
             --apply \
             --report "$RUNNER_TEMP/apply.json" \
             --github-output
@@ -128,11 +139,23 @@ jobs:
               --body "Applies the candidates ticked in #${{ inputs.issue-number }}. Review each entry before merging."
           fi
 
+      - name: Record accepts and rejects
+        if: ${{ !inputs.dry-run && steps.apply.outputs.state == 'true' }}
+        run: |
+          set -euo pipefail
+          git checkout "${{ inputs.base-branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "${{ inputs.state-path }}"
+          git commit -m "chore(digest): record digest decisions [skip ci]"
+          git push
+
       - name: Comment on the issue
-        if: ${{ !inputs.dry-run && steps.apply.outputs.changed == 'true' }}
+        if: ${{ !inputs.dry-run && (steps.apply.outputs.changed == 'true' || steps.apply.outputs.rejected != '0') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           entries=$(jq -r '.entries' "$RUNNER_TEMP/apply.json")
+          rejected=$(jq -r '.rejected | length' "$RUNNER_TEMP/apply.json")
           gh issue comment "${{ inputs.issue-number }}" --body \
-            "Applied ${entries} candidate(s) to \`${{ inputs.target-file }}\` on branch \`digest/issue-${{ inputs.issue-number }}\`."
+            "Applied ${entries} candidate(s) to \`${{ inputs.target-file }}\` and recorded ${rejected} rejection(s)."

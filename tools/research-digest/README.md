@@ -29,6 +29,15 @@ Hacker News (Algolia), GitHub (keyword and topic search), Reddit, Lobsters,
 arXiv, Mastodon, Bluesky, generic RSS/Atom feeds and Product Hunt. Any source
 that fails is logged and skipped, so one dead API never fails a run.
 
+Reddit prefers **application-only OAuth** when `REDDIT_CLIENT_ID` and
+`REDDIT_CLIENT_SECRET` are set — that also restores vote counts — and falls back
+to the public Atom feed otherwise. Google News search feeds are the cheapest way
+to widen coverage for a niche topic:
+
+```
+https://news.google.com/rss/search?q=%22volunteer+computing%22&hl=en-US&gl=US&ceid=US:en
+```
+
 ## Ranking
 
 Raw signals are not comparable across sources (HN points vs GitHub stars vs
@@ -39,7 +48,10 @@ upvotes), so each source is:
 3. multiplied by `source_weights[<source>]` and a freshness decay
    (`0.5 ** (age_days / half_life_days)`).
 
-The merged list is then optionally re-ranked by a model on GitHub Models.
+The merged list is then optionally re-ranked by a model. With no model the
+digest instead labels relevance from **keyword overlap** against
+`list_description` + `keywords` (`relevance_weight` controls how much that
+counts), so the high/medium/other sections still mean something.
 
 ## Using it from a list repository
 
@@ -62,9 +74,9 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write # commits .github/research-digest-state.json
   issues: write
-  models: read # lets GITHUB_TOKEN call GitHub Models
+  models: read # only needed if you enable GitHub Models
 
 jobs:
   digest:
@@ -119,15 +131,21 @@ jobs:
 
 ### From a digest issue to a merge
 
-1. The scheduled run opens an issue titled `[auto] Research digest <date>`.
-2. Each candidate is a task-list item with a copy-paste entry and a suggested
-   section, plus a hidden `<!-- digest-payload -->` JSON block.
+1. The scheduled run opens the rolling issue labelled `research`, or updates the
+   one already open: previous weeks are collapsed under a `<details>` block.
+2. Each candidate is a task-list item with a copy-paste entry, a suggested
+   section and a relevance label, plus a hidden `<!-- digest-payload -->` JSON
+   block. Only the newest week carries a payload.
 3. Tick the boxes you want. Editing an issue body fires the apply workflow.
 4. The apply workflow inserts the entries under the suggested `## heading`
    (creating it if missing), never duplicating a URL already on the list, and
    opens a pull request on `digest/issue-<n>` for review.
+5. Tick anything under **Not interested** to record a rejection in
+   `.github/research-digest-state.json`. Rejected URLs are not offered again
+   unless their signal later grows by `resurface_boost`.
 
-Unticking and re-editing updates the same branch and PR.
+Unticking and re-editing updates the same branch and PR. The state file also
+records `first_seen` and `times_seen`, which the digest surfaces as `seen 3×`.
 
 ## Configuration
 
@@ -146,13 +164,17 @@ All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 | `half_life_days`                      | `21`                                     | Freshness decay half-life.                                                                                                                  |
 | `keyword_gate`                        | `["Hacker News", "Bluesky", "Mastodon"]` | Sources whose candidates must mention one of `keywords` in the title or description. Free-text sources are noisy without a relevance model. |
 | `request_delay`                       | `1.0`                                    | Seconds between requests to Reddit and Mastodon, which answer 429 when hammered.                                                            |
+| `relevance_weight`                    | `0.35`                                   | How much keyword overlap counts versus source signal in the rank.                                                                           |
+| `relevance_high` / `relevance_medium` | `0.45` / `0.28`                          | Overlap cut-offs for the labelled sections when no model runs.                                                                              |
+| `state_file`                          | `.github/research-digest-state.json`     | Accepted/rejected history. Empty disables it.                                                                                               |
+| `resurface_boost`                     | `1.25`                                   | A rejected URL is offered again only if its signal grows by this factor.                                                                    |
 | `sections`                            | `[]`                                     | Allowed sections; empty means auto-detect `##` headings from `README.md`.                                                                   |
 | `default_section`                     | `""`                                     | Fallback when the LLM cannot pick a section.                                                                                                |
 | `readme_files`                        | `["README.md"]`                          | Files scanned for headings.                                                                                                                 |
 | `hn_queries`, `min_hn_points`         | `[]`, `3`                                | Hacker News queries.                                                                                                                        |
 | `github_queries`, `min_github_stars`  | `[]`, `5`                                | GitHub search queries (supports `created:` filters).                                                                                        |
 | `github_topics`                       | `[]`                                     | GitHub `topic:` searches, not date-restricted.                                                                                              |
-| `reddit_subreddits`                   | `[]`                                     | Subreddits via the public Atom feed (`.rss`); the `.json` API blocks unauthenticated hosts.                                                 |
+| `reddit_subreddits`                   | `[]`                                     | Subreddits. Uses OAuth when `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` are set, else the Atom feed (no vote counts).                         |
 | `lobsters_tags`, `min_lobsters_score` | `[]`, `5`                                | Lobsters tag feeds (`/t/<tag>.json`), filtered by `keywords`. `/search.json` rejects all query parameters.                                  |
 | `arxiv_queries`                       | `[]`                                     | arXiv `search_query` strings. Spaces must be `+` (the tool encodes them); prefer broad `all:"..."` over narrow `cat:` intersections.        |
 | `mastodon_instances`, `mastodon_tags` | `[]`, `[]`                               | Instance × tag timelines.                                                                                                                   |
@@ -163,22 +185,25 @@ All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 
 ### Credentials
 
-| Variable            | Required      | Purpose                                                          |
-| ------------------- | ------------- | ---------------------------------------------------------------- |
-| `GITHUB_TOKEN`      | yes (Actions) | GitHub search and issue de-duplication.                          |
-| `LLM_API_KEY`       | no            | Enables LLM ranking against any OpenAI-compatible endpoint.      |
-| `LLM_BASE_URL`      | no            | Endpoint base. Defaults to `https://models.github.ai/inference`. |
-| `PRODUCTHUNT_TOKEN` | no            | Enables the Product Hunt source.                                 |
+| Variable               | Required      | Purpose                                                          |
+| ---------------------- | ------------- | ---------------------------------------------------------------- |
+| `GITHUB_TOKEN`         | yes (Actions) | GitHub search and issue de-duplication.                          |
+| `LLM_API_KEY`          | no            | Enables model ranking against any OpenAI-compatible endpoint.    |
+| `LLM_BASE_URL`         | no            | Endpoint base. Defaults to `https://models.github.ai/inference`. |
+| `PRODUCTHUNT_TOKEN`    | no            | Enables the Product Hunt source.                                 |
+| `REDDIT_CLIENT_ID`     | no            | Reddit app id; enables OAuth and restores vote counts.           |
+| `REDDIT_CLIENT_SECRET` | no            | Reddit app secret.                                               |
 
-The digest works with no LLM at all — ranking then uses the per-source
-normalisation described above. To turn the model pass on, either set
-`LLM_API_KEY`, or call the workflow with `use-github-models: true`, which sends
-the built-in `GITHUB_TOKEN` to GitHub Models (the workflow declares
-`models: read`).
+The digest works with no model at all — ranking then uses the per-source
+normalisation plus keyword overlap described above. To turn the model pass on,
+set `LLM_API_KEY` (and `LLM_BASE_URL` for a non-GitHub provider). GitHub Models
+via the built-in token is **not** enabled by default, because in testing
+`models.github.ai` answered every request with a `text/plain` body of `OK` from
+both a local network and a hosted runner holding `models: read`.
 
 If a model call fails, the digest says so inline
-(`_Heuristic ranking only — LLM unavailable: …_`) rather than silently dropping
-rankings, and the run emits a warning annotation.
+(`_Model unavailable: …_`) rather than silently dropping rankings, and the run
+emits a warning annotation.
 
 ## Endpoint quirks
 
@@ -199,14 +224,36 @@ changing a source; each was found by testing against the live endpoint.
 ```sh
 cd tools/research-digest
 python3 research_digest.py --root /path/to/list --config /path/to/list/.github/research-digest.json \
+    --state /path/to/list/.github/research-digest-state.json \
     --out /tmp/digest.md --json /tmp/digest.json --no-llm
 
 python3 apply_digest.py --root /path/to/list --body-file /tmp/digest.md        # dry-run diff
 python3 apply_digest.py --root /path/to/list --body-file /tmp/digest.md --apply
 ```
 
-Useful flags: `--days-back N`, `--no-llm`, `--today YYYY-MM-DD`, `--source`
-is not supported yet — narrow the config instead.
+Useful flags: `--days-back N`, `--no-llm`, `--today YYYY-MM-DD`,
+`--state FILE`, `--merge-into FILE` (rolling issue), `--doctor`. There is no
+`--source` filter yet — narrow the config instead.
+
+## Tuning queries with the doctor
+
+`--doctor` runs every configured query and reports how many candidates it
+produced, so tuning is driven by data rather than guesswork:
+
+```sh
+python3 research_digest.py --root /path/to/list --config ... --doctor
+```
+
+```
+| Source | Query                   | Candidates |
+| ------ | ----------------------- | ---------- |
+| Hacker News | `BOINC`            | 4          |
+| Hacker News | `citizen science`  | 0          |
+| RSS    | `…news.google.com…`     | 64         |
+```
+
+A query that stays at zero across runs is worth rewriting or dropping. Remember
+`keywords` do double duty: they drive both the relevance score and the gate.
 
 ## Tests
 
