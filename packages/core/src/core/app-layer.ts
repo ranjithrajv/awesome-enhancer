@@ -21,9 +21,10 @@ export function buildAppLayer(
     Layer.provide(Layer.merge(cacheLayer, loggerLayer)),
   );
 
-  const gitlabLayer = GitLabLive(options.gitlabToken).pipe(
-    Layer.provide(Layer.merge(cacheLayer, loggerLayer)),
-  );
+  const gitlabLayer = GitLabLive({
+    token: options.gitlabToken,
+    baseUrl: options.gitlabUrl || undefined,
+  }).pipe(Layer.provide(Layer.merge(cacheLayer, loggerLayer)));
 
   const scraperLayer = ScraperLive.pipe(Layer.provide(Layer.merge(cacheLayer, loggerLayer)));
 

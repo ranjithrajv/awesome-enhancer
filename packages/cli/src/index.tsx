@@ -18,6 +18,8 @@ interface CliOptions {
   output?: string;
   dryRun?: boolean;
   githubToken?: string;
+  gitlabToken?: string;
+  gitlabUrl?: string;
   skipLint?: boolean;
 }
 
@@ -44,6 +46,10 @@ function parseArgs(): { fileOrUrl?: string; options: CliOptions } {
       options.output = args[++i];
     } else if (arg === '--github-token' && i + 1 < args.length) {
       options.githubToken = args[++i];
+    } else if (arg === '--gitlab-token' && i + 1 < args.length) {
+      options.gitlabToken = args[++i];
+    } else if (arg === '--gitlab-url' && i + 1 < args.length) {
+      options.gitlabUrl = args[++i];
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -77,6 +83,8 @@ Options:
   --output <file>          Output file (default: overwrites input)
   --dry-run                Preview changes without writing to file
   --github-token <token>   GitHub API token for higher rate limits
+  --gitlab-token <token>   GitLab API token for GitLab self-hosted
+  --gitlab-url <url>       GitLab self-hosted URL (e.g., https://gitlab.company.com)
   --skip-lint              Skip running awesome-lint
   --help, -h               Show this help message
   --version, -v            Show version number
@@ -86,6 +94,7 @@ Examples:
   npx awesome-enhancer https://github.com/user/awesome-list --update-descriptions
   npx awesome-enhancer README.md --add-metadata --update-descriptions --dry-run
   npx awesome-enhancer README.md --detect-stale
+  npx awesome-enhancer README.md --add-metadata --gitlab-url https://gitlab.company.com --gitlab-token <token>
 `);
 }
 

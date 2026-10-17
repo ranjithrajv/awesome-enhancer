@@ -39,7 +39,7 @@ const NoopScraperLive = Layer.succeed(ScraperService, {
 function buildBrowserLayer(githubToken: string | null, gitlabToken: string | null) {
   const deps = Layer.merge(BrowserCacheLive, SilentLive);
   const githubLayer = GitHubLive(githubToken).pipe(Layer.provide(deps));
-  const gitlabLayer = GitLabLive(gitlabToken).pipe(Layer.provide(deps));
+  const gitlabLayer = GitLabLive({ token: gitlabToken }).pipe(Layer.provide(deps));
   return Layer.mergeAll(githubLayer, gitlabLayer, NoopScraperLive, SilentLive, BrowserCacheLive);
 }
 

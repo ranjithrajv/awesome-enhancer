@@ -21,14 +21,20 @@ export class GitLabService extends Context.Tag('GitLabService')<
   }
 >() {}
 
-const GITLAB_BASE = 'https://gitlab.com/api/v4';
+const DEFAULT_GITLAB_BASE = 'https://gitlab.com/api/v4';
 const GITLAB_USER_AGENT = 'awesome-enhancer-gitlab';
 const GITLAB_RATE_LIMIT_HEADER = 'rate-limit-remaining';
 
+export interface GitLabOptions {
+  token?: string | null;
+  baseUrl?: string;
+}
+
 export const GitLabLive = (
-  token: string | null,
-): Layer.Layer<GitLabService, never, CacheService | LoggerService> =>
-  Layer.effect(
+  options: GitLabOptions = {},
+): Layer.Layer<GitLabService, never, CacheService | LoggerService> => {
+  const { token = null, baseUrl = DEFAULT_GITLAB_BASE } = options;
+  return Layer.effect(
     GitLabService,
     Effect.gen(function* () {
       const cache = yield* CacheService;
@@ -43,7 +49,7 @@ export const GitLabLive = (
 
       const fetchJson = <T>(path: string): Effect.Effect<T, NetworkError> => {
         return Effect.gen(function* () {
-          const url = `${GITLAB_BASE}${path}`;
+          const url = `${baseUrl}${path}`;
           const cached = yield* cache.get<{ data: T }>(url);
           if (Option.isSome(cached)) return cached.value.data;
 
@@ -78,7 +84,7 @@ export const GitLabLive = (
           ];
 
           for (const path of candidates) {
-            const url = `${GITLAB_BASE}${path}`;
+            const url = `${baseUrl}${path}`;
             const cached = yield* cache.get<{ data: string }>(url);
             if (Option.isSome(cached)) return cached.value.data;
 
@@ -104,7 +110,7 @@ export const GitLabLive = (
 
           return yield* Effect.fail(
             new NetworkError({
-              url: `${GITLAB_BASE}/projects/${encoded}/repository/files/README.md/raw`,
+              url: `${baseUrl}/projects/${encoded}/repository/files/README.md/raw`,
               statusCode: 404,
               message: `README not found in ${owner}/${repo} (tried main/master branches)`,
             }),
@@ -120,3 +126,4 @@ export const GitLabLive = (
       };
     }),
   );
+};

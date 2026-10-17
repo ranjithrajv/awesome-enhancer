@@ -10,10 +10,15 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
 /**
  * Parse GitLab repository URL
  * @param {string} url - URL to parse
+ * @param {string} [customDomain] - Optional custom GitLab domain (e.g., 'gitlab.company.com')
  * @returns {object|null} - { owner, repo } or null if not a GitLab URL
  */
-export function parseGitLabUrl(url: string): { owner: string; repo: string } | null {
-  return parseGitUrl(url, 'gitlab.com');
+export function parseGitLabUrl(
+  url: string,
+  customDomain?: string,
+): { owner: string; repo: string } | null {
+  const domain = customDomain || 'gitlab.com';
+  return parseGitUrl(url, domain);
 }
 
 function parseGitUrl(url: string, domain: string): { owner: string; repo: string } | null {

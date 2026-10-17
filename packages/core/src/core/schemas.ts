@@ -4,6 +4,7 @@ import { DEFAULT_CACHE_TTL, DEFAULT_CACHE_DIR, DEFAULT_BADGE_STYLE } from './con
 export const ConfigSchema = z.object({
   githubToken: z.string().optional(),
   gitlabToken: z.string().optional(),
+  gitlabUrl: z.string().optional(),
   cacheTTL: z.number().default(DEFAULT_CACHE_TTL),
 });
 
@@ -17,6 +18,7 @@ export const EnhanceOptionsSchema = z.object({
   detectRedirects: z.boolean().default(false),
   githubToken: z.string().nullable().default(null),
   gitlabToken: z.string().nullable().default(null),
+  gitlabUrl: z.string().nullable().default(null),
   cacheTTL: z.number().default(DEFAULT_CACHE_TTL),
   badgeStyle: z.string().default(DEFAULT_BADGE_STYLE),
   cacheDir: z.string().default(DEFAULT_CACHE_DIR),

@@ -22,5 +22,6 @@ export async function loadConfig(): Promise<Config> {
     ...fileConfig,
     githubToken: process.env.GITHUB_TOKEN || fileConfig.githubToken,
     gitlabToken: process.env.GITLAB_TOKEN || fileConfig.gitlabToken,
+    gitlabUrl: process.env.GITLAB_URL || fileConfig.gitlabUrl,
   });
 }

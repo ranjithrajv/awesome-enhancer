@@ -45,6 +45,7 @@ export interface EnhanceCommandOptions {
   dryRun?: boolean;
   githubToken?: string;
   gitlabToken?: string;
+  gitlabUrl?: string;
   skipLint?: boolean;
 }
 
@@ -95,6 +96,7 @@ export async function enhanceCommand(
     const config = yield* Effect.promise(() => loadConfig());
     const githubToken = options.githubToken || config.githubToken || null;
     const gitlabToken = options.gitlabToken || config.gitlabToken || null;
+    const gitlabUrl = options.gitlabUrl || config.gitlabUrl || null;
     const cacheTTL = config.cacheTTL;
 
     const isUrl = isValidUrl(resolvedFileOrUrl!);
@@ -136,6 +138,7 @@ export async function enhanceCommand(
       detectRedirects: options.detectRedirects ?? false,
       githubToken,
       gitlabToken,
+      gitlabUrl,
       cacheTTL,
     });
 
@@ -185,6 +188,7 @@ export async function enhanceCommand(
       detectRedirects: options.detectRedirects ?? false,
       githubToken: options.githubToken || config.githubToken || null,
       gitlabToken: options.gitlabToken || config.gitlabToken || null,
+      gitlabUrl: options.gitlabUrl || config.gitlabUrl || null,
       cacheTTL: config.cacheTTL,
     }),
   );
