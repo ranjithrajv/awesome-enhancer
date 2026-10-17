@@ -40,7 +40,7 @@ jobs:
         run: bun install
 
       - name: Run security audit
-        run: bun audit
+        run: bun audit --audit-level=critical
 
   test:
     name: Test

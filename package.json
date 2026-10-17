@@ -22,9 +22,13 @@
     "clean:all": "bun run clean && rm -rf node_modules packages/*/node_modules",
     "audit": "bun audit"
   },
+  "overrides": {
+    "proxy-addr": "^2.0.8",
+    "tinypool": "^2.1.2"
+  },
   "devDependencies": {
     "@types/node": "^25.0.10",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.12",
     "oxlint": "^1.41.0",
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",
@@ -32,6 +36,6 @@
     "vite": "latest",
     "vite-plugin-dts": "latest",
     "vite-plus": "^0.1.11",
-    "vitest": "latest"
+    "vitest": "^4.1.12"
   }
 }
