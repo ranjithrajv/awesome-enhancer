@@ -35,7 +35,7 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 VERSION = 2
@@ -88,11 +88,10 @@ DEFAULTS: dict = {
     "github_queries": [],
     "github_topics": [],
     "min_github_stars": 5,
-    # Reddit
+    # Reddit (public Atom feed; the .json API blocks unauthenticated cloud IPs)
     "reddit_subreddits": [],
-    "min_reddit_score": 5,
-    # Lobsters
-    "lobsters_queries": [],
+    # Lobsters (tag feeds; /search.json rejects every query parameter)
+    "lobsters_tags": [],
     "min_lobsters_score": 5,
     # arXiv
     "arxiv_queries": [],
@@ -220,6 +219,17 @@ def _clean(text: str) -> str:
 
 def _strip_html(text: str) -> str:
     return _clean(re.sub(r"<[^>]+>", " ", text or ""))
+
+
+def _snippet(data, limit: int = 120) -> str:
+    """First ``limit`` characters of a response body, for diagnostics."""
+    if data is None:
+        return ""
+    try:
+        text = data.decode("utf-8", "replace") if isinstance(data, (bytes, bytearray)) else str(data)
+    except Exception:  # noqa: BLE001
+        return ""
+    return _clean(text)[:limit]
 
 
 def _epoch_to_date(value) -> str:
@@ -433,8 +443,10 @@ def fetch_arxiv(cfg: dict, ctx: Context) -> list:
     ns = "{http://www.w3.org/2005/Atom}"
     out = []
     for query in cfg["arxiv_queries"]:
+        # arXiv rejects %20-encoded spaces in search_query; it wants '+'.
         url = ("http://export.arxiv.org/api/query?search_query="
-               + quote(query, safe=':+(),"') + "&sortBy=submittedDate&sortOrder=descending&max_results=25")
+               + quote_plus(query, safe=":+,()")
+               + "&sortBy=submittedDate&sortOrder=descending&max_results=25")
         root = ET.fromstring(http_request(url))
         for entry in root.findall(ns + "entry"):
             link = _clean(entry.findtext(ns + "id") or "")
@@ -450,49 +462,63 @@ def fetch_arxiv(cfg: dict, ctx: Context) -> list:
 
 
 def fetch_lobsters(cfg: dict, ctx: Context) -> list:
+    """Lobsters via tag feeds; /search.json rejects every query parameter."""
+    tags = cfg["lobsters_tags"]
+    if not tags:
+        return []
+    keywords = [k.lower() for k in cfg["keywords"] if k]
     out = []
-    for query in cfg["lobsters_queries"]:
-        params = {"q": query, "what": "stories", "order": "newest"}
-        data = http_json("https://lobste.rs/search.json?" + urlencode(params),
-                         headers={"Accept": "application/json"})
+    for tag in tags:
+        data = http_json(f"https://lobste.rs/t/{quote(tag)}.json")
         for story in data if isinstance(data, list) else []:
             url = story.get("url") or story.get("comments_url") or ""
             created = (story.get("created_at") or "")[:10]
             score = float(story.get("score") or 0)
+            title = _clean(story.get("title") or "")
+            description = _clean(story.get("description") or "")
             if not _valid_url(url) or score < cfg["min_lobsters_score"]:
                 continue
             if created and created < ctx.since_date:
                 continue
+            # Tag feeds are site-wide, so keep only stories matching our keywords.
+            if keywords and not any(k in f"{title} {description}".lower() for k in keywords):
+                continue
             out.append(Candidate(
-                url=normalize_url(url), title=_clean(story.get("title") or ""),
-                description=_clean(story.get("description") or ""), source="Lobsters",
-                signal=f"{int(score)} pts", score=score, published=created,
+                url=normalize_url(url), title=title, description=description,
+                source="Lobsters", signal=f"{int(score)} pts · t/{tag}", score=score,
+                published=created,
             ))
     return out
 
 
 def fetch_reddit(cfg: dict, ctx: Context) -> list:
+    """Reddit via the public Atom feed; the .json API blocks unauthenticated hosts."""
+    keywords = [k.lower() for k in cfg["keywords"] if k]
     out = []
     for sub in cfg["reddit_subreddits"]:
-        data = http_json(f"https://www.reddit.com/r/{sub}/new.json?"
-                         + urlencode({"limit": "25", "raw_json": "1"}))
-        for child in data.get("data", {}).get("children", []):
-            post = child.get("data", {})
-            score = float(post.get("score") or 0)
-            created = _epoch_to_date(post.get("created_utc"))
-            if post.get("stickied") or post.get("over_18"):
+        url = f"https://www.reddit.com/r/{quote(sub)}/.rss"
+        try:
+            root = ET.fromstring(http_request(url, headers={"Accept": "application/atom+xml"}))
+        except Exception as exc:  # noqa: BLE001 - a blocked subreddit must not fail the run
+            log(f"reddit feed failed {sub}: {exc}")
+            continue
+        ns = "{http://www.w3.org/2005/Atom}"
+        for entry in root.findall(".//" + ns + "entry"):
+            title = _atom_or_rss_text(entry, "title")
+            link = _atom_or_rss_link(entry)
+            body = _strip_html(_atom_or_rss_text(entry, "content"))
+            published = _parse_date(_atom_or_rss_text(entry, "updated")
+                                    or _atom_or_rss_text(entry, "published"))
+            if not _valid_url(link):
                 continue
-            if score < cfg["min_reddit_score"] or (created and created < ctx.since_date):
-                continue
-            url = post.get("url_overridden_by_dest") or post.get("url") or ""
-            if url.startswith("/"):
-                url = "https://www.reddit.com" + url
-            if not _valid_url(url):
+            blob = f"{title} {body}".lower()
+            hits = [k for k in keywords if k in blob]
+            if not hits:
                 continue
             out.append(Candidate(
-                url=normalize_url(url), title=_clean(post.get("title") or ""),
-                description="", source="Reddit", signal=f"r/{sub} · {int(score)}↑",
-                score=score, published=created,
+                url=normalize_url(link), title=title, description=body[:200],
+                source="Reddit", signal=f"r/{sub} · {', '.join(hits[:2])}",
+                score=2.0 * len(hits), published=published,
             ))
     return out
 
@@ -524,7 +550,7 @@ def fetch_mastodon(cfg: dict, ctx: Context) -> list:
 def fetch_bluesky(cfg: dict, ctx: Context) -> list:
     out = []
     for query in cfg["bluesky_queries"]:
-        data = http_json("https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?"
+        data = http_json("https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?"
                          + urlencode({"q": query, "limit": "25"}))
         for post in data.get("posts", []):
             record = post.get("record", {}) or {}
@@ -714,15 +740,19 @@ def _match_section(name: str, sections: list) -> str:
     return ""
 
 
-def llm_rank(candidates: list, cfg: dict, sections: list) -> bool:
-    """Re-rank candidates with an OpenAI-compatible endpoint. Returns used_llm."""
+def llm_rank(candidates: list, cfg: dict, sections: list) -> tuple:
+    """Re-rank candidates with an OpenAI-compatible endpoint.
+
+    Returns ``(used_llm, note)``. ``note`` is empty when no key is configured
+    (the expected default) and explains the failure otherwise, so the digest can
+    say why it fell back to heuristic ranking.
+    """
     if not candidates:
-        return False
+        return False, ""
     key = (os.environ.get("LLM_API_KEY") or os.environ.get("GITHUB_TOKEN")
            or os.environ.get("GH_TOKEN"))
     if not key:
-        log("llm ranking skipped: no LLM_API_KEY or GITHUB_TOKEN available")
-        return False
+        return False, ""
     base = (os.environ.get("LLM_BASE_URL") or "https://models.github.ai/inference").rstrip("/")
     model = (os.environ.get("LLM_MODEL")
              or (cfg.get("llm") or {}).get("model")
@@ -747,10 +777,12 @@ def llm_rank(candidates: list, cfg: dict, sections: list) -> bool:
                      {"role": "user", "content": json.dumps(slim)}],
     }
     parsed = None
+    note = ""
     for with_format in (True, False):
         payload = dict(body)
         if with_format:
             payload["response_format"] = {"type": "json_object"}
+        raw = None
         try:
             raw = http_request(
                 f"{base}/chat/completions", method="POST",
@@ -764,13 +796,19 @@ def llm_rank(candidates: list, cfg: dict, sections: list) -> bool:
                 content = content[content.index("{"): content.rindex("}") + 1]
             parsed = json.loads(content)
             break
+        except json.JSONDecodeError as exc:
+            # A non-JSON body (an HTML error page or a gateway stub) is the most
+            # common failure, so surface what actually came back.
+            note = f"{exc} (response began: {_snippet(raw)})"
+            log(f"llm ranking attempt failed ({'json' if with_format else 'plain'}): {note}")
         except Exception as exc:  # noqa: BLE001
-            log(f"llm ranking attempt failed ({'json' if with_format else 'plain'}): {exc}")
+            note = f"{type(exc).__name__}: {exc}"
+            log(f"llm ranking attempt failed ({'json' if with_format else 'plain'}): {note}")
     if parsed is None:
-        return False
+        return False, note
     items = parsed.get("candidates") if isinstance(parsed, dict) else parsed
     if not isinstance(items, list):
-        return False
+        return False, "model response contained no candidates array"
     by_url = {}
     for item in items:
         if isinstance(item, dict) and item.get("url"):
@@ -787,7 +825,7 @@ def llm_rank(candidates: list, cfg: dict, sections: list) -> bool:
         cand.section = section or cfg.get("default_section", "")
         matched += 1
     log(f"llm ranked {matched}/{len(candidates)} candidates with {model}")
-    return matched > 0
+    return matched > 0, ("" if matched else "model matched none of the candidates")
 
 
 # --------------------------------------------------------------------------- #
@@ -814,6 +852,9 @@ def render(candidates: list, cfg: dict, used_llm: bool, meta: dict) -> tuple:
     today = meta["today"]
     lines = [f"# Research digest — {today}", ""]
     ranking = "Ranked by LLM." if used_llm else "_Heuristic ranking only._"
+    if not used_llm and meta.get("llm_note"):
+        ranking = ("_Heuristic ranking only — LLM unavailable: "
+                   + esc(meta["llm_note"], 140) + "._")
     lines.append(f"Scanned the last {cfg['days_back']} days: {meta['raw']} raw findings, "
                  f"{meta['unique']} new candidates after dedupe, {meta['ranked']} shown. {ranking}")
     lines += ["", "Tick a candidate to add it, then the apply workflow opens a pull request.", ""]
@@ -896,7 +937,7 @@ def main(argv=None) -> int:
     ranked = rank_and_cap(unique, cfg, today)
     shown = ranked[: int(cfg["max_llm_candidates"])]
     sections = read_sections(root, cfg)
-    used_llm = False if args.no_llm else llm_rank(shown, cfg, sections)
+    used_llm, llm_note = (False, "") if args.no_llm else llm_rank(shown, cfg, sections)
     # Without a model (or when it declines) every entry still needs a home.
     fallback_section = cfg.get("default_section") or (sections[0] if sections else "")
     if fallback_section:
@@ -904,7 +945,10 @@ def main(argv=None) -> int:
             if not cand.section:
                 cand.section = fallback_section
 
-    meta = {"raw": len(raw), "unique": len(unique), "ranked": len(shown), "today": today.isoformat()}
+    meta = {"raw": len(raw), "unique": len(unique), "ranked": len(shown),
+            "today": today.isoformat(), "llm_note": llm_note}
+    if llm_note and args.out:
+        print(f"::warning::LLM ranking unavailable: {llm_note}")
     report, payload = render(shown, cfg, used_llm, meta)
 
     document = {

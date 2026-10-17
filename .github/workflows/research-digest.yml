@@ -26,6 +26,10 @@ on:
         description: Override the LLM model id (default from config, else openai/gpt-4o-mini).
         type: string
         default: ""
+      use-github-models:
+        description: Rank with the built-in token against GitHub Models. Off by default; see the tool README.
+        type: boolean
+        default: false
       label:
         description: Label applied to the digest issue, also used for dedupe history.
         type: string
@@ -78,9 +82,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GitHub Models accepts the built-in token once `models: read` is granted,
-          # so no secret is needed. An explicit key still wins when set.
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.GITHUB_TOKEN }}
+          # GitHub Models is opt-in. When tested (locally and on a hosted runner)
+          # models.github.ai answered every request with a text/plain "OK" stub,
+          # so the default is heuristic ranking. Set use-github-models, or set
+          # LLM_API_KEY to use any OpenAI-compatible endpoint.
+          LLM_API_KEY: ${{ inputs.use-github-models && secrets.GITHUB_TOKEN || secrets.LLM_API_KEY }}
           LLM_BASE_URL: https://models.github.ai/inference
           LLM_MODEL: ${{ inputs.model }}
           PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}

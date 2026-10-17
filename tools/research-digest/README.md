@@ -131,11 +131,11 @@ All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 | `hn_queries`, `min_hn_points` | `[]`, `3` | Hacker News queries. |
 | `github_queries`, `min_github_stars` | `[]`, `5` | GitHub search queries (supports `created:` filters). |
 | `github_topics` | `[]` | GitHub `topic:` searches, not date-restricted. |
-| `reddit_subreddits`, `min_reddit_score` | `[]`, `5` | Subreddits via the public JSON API. |
-| `lobsters_queries`, `min_lobsters_score` | `[]`, `5` | Lobsters search. |
-| `arxiv_queries` | `[]` | arXiv `search_query` strings, e.g. `cat:cs.DC AND all:"volunteer computing"`. |
+| `reddit_subreddits` | `[]` | Subreddits via the public Atom feed (`.rss`); the `.json` API blocks unauthenticated hosts. |
+| `lobsters_tags`, `min_lobsters_score` | `[]`, `5` | Lobsters tag feeds (`/t/<tag>.json`), filtered by `keywords`. `/search.json` rejects all query parameters. |
+| `arxiv_queries` | `[]` | arXiv `search_query` strings. Spaces must be `+` (the tool encodes them); prefer broad `all:"..."` over narrow `cat:` intersections. |
 | `mastodon_instances`, `mastodon_tags` | `[]`, `[]` | Instance × tag timelines. |
-| `bluesky_queries` | `[]` | Bluesky post search (public AppView). |
+| `bluesky_queries` | `[]` | Bluesky post search via `api.bsky.app` (`public.api.bsky.app` returns 403). |
 | `rss_feeds` | `[]` | RSS or Atom feed URLs. |
 | `producthunt` | `true` | Enabled only when `PRODUCTHUNT_TOKEN` is set. |
 | `llm.model` | `openai/gpt-4o-mini` | Model id. |
@@ -144,13 +144,34 @@ All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | yes (Actions) | GitHub search, issue dedupe, GitHub Models inference. |
-| `LLM_API_KEY` | no | Overrides `GITHUB_TOKEN` for inference (any OpenAI-compatible endpoint). |
-| `LLM_BASE_URL` | no | Defaults to `https://models.github.ai/inference`. |
+| `GITHUB_TOKEN` | yes (Actions) | GitHub search and issue de-duplication. |
+| `LLM_API_KEY` | no | Enables LLM ranking against any OpenAI-compatible endpoint. |
+| `LLM_BASE_URL` | no | Endpoint base. Defaults to `https://models.github.ai/inference`. |
 | `PRODUCTHUNT_TOKEN` | no | Enables the Product Hunt source. |
 
-Because GitHub Models accepts the Actions token, **no LLM secret is required**:
-grant `models: read` and the digest gets LLM rankings out of the box.
+The digest works with no LLM at all — ranking then uses the per-source
+normalisation described above. To turn the model pass on, either set
+`LLM_API_KEY`, or call the workflow with `use-github-models: true`, which sends
+the built-in `GITHUB_TOKEN` to GitHub Models (the workflow declares
+`models: read`).
+
+If a model call fails, the digest says so inline
+(`_Heuristic ranking only — LLM unavailable: …_`) rather than silently dropping
+rankings, and the run emits a warning annotation.
+
+## Endpoint quirks
+
+These are the behaviours the sources work around. Keep them in mind when
+changing a source; each was found by testing against the live endpoint.
+
+| Endpoint | Observed behaviour | How it is handled |
+| --- | --- | --- |
+| `models.github.ai/inference/*` | HTTP 200 with a `text/plain` body of `OK` for every path, both locally and from a hosted runner holding `models: read` | LLM ranking is opt-in and reports the failure in the digest |
+| `lobste.rs/search.json?q=…` | HTTP 400 "Unpermitted query or form parameter" for every parameter combination tried | use tag feeds `/t/<tag>.json`, filtered by `keywords` |
+| `reddit.com/r/<sub>/new.json` | HTTP 403 "Blocked" for unauthenticated clients | use the public Atom feed `/<sub>/.rss` (no vote counts available) |
+| `public.api.bsky.app/…/searchPosts` | HTTP 403 with an HTML error page | use `api.bsky.app` |
+| `export.arxiv.org/api/query` | HTTP 400 when spaces are encoded as `%20` | encode spaces as `+` |
+| `phys.org`-style news feeds | often no keyword matches in a two-week window | expected: an empty digest is a valid result |
 
 ## Running locally
 

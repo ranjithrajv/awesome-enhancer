@@ -21,12 +21,11 @@
   "min_github_stars": 5,
 
   "reddit_subreddits": ["example"],
-  "min_reddit_score": 5,
 
-  "lobsters_queries": ["example keyword"],
+  "lobsters_tags": ["example-tag"],
   "min_lobsters_score": 5,
 
-  "arxiv_queries": ["cat:cs.DC AND all:\"example keyword\""],
+  "arxiv_queries": ["all:\"example keyword\""],
 
   "mastodon_instances": ["fosstodon.org"],
   "mastodon_tags": ["example"],

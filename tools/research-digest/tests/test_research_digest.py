@@ -216,7 +216,7 @@ def test_llm_rank_matches_urls_and_validates_sections(monkeypatch):
         rd.Candidate(url="https://a.example/2", title="Two", source="GitHub"),
     ]
     used = rd.llm_rank(candidates, _llm_config(), ["Projects", "Servers"])
-    assert used is True
+    assert used[0] is True
     assert candidates[0].relevance == "high"
     assert candidates[0].section == "Servers"
     assert candidates[1].relevance == "unrated"   # invalid relevance is rejected
@@ -227,7 +227,15 @@ def test_llm_rank_skips_without_credentials(monkeypatch):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("GH_TOKEN", raising=False)
-    assert rd.llm_rank([rd.Candidate(url="https://a.example/1")], _llm_config(), []) is False
+    assert rd.llm_rank([rd.Candidate(url="https://a.example/1")], _llm_config(), []) == (False, "")
+
+
+def test_llm_rank_reports_a_non_json_body(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setattr(rd, "http_request", lambda *a, **k: b"OK")
+    used, note = rd.llm_rank([rd.Candidate(url="https://a.example/1", title="A")], _llm_config(), [])
+    assert used is False
+    assert "OK" in note  # the unexpected body is surfaced, not hidden
 
 
 # --------------------------------------------------------------------------- #
@@ -261,3 +269,117 @@ def test_render_handles_no_candidates():
     assert "No new candidates found this week." in report
     assert "Heuristic ranking only." in report
     assert payload == []
+
+
+def test_render_surfaces_an_llm_failure():
+    candidates = [rd.Candidate(url="https://a.example/1", title="A", source="GitHub")]
+    meta = {"raw": 1, "unique": 1, "ranked": 1, "today": "2026-10-17",
+            "llm_note": "JSONDecodeError (response began: OK)"}
+    report, _ = rd.render(candidates, _config(), False, meta)
+    assert "LLM unavailable" in report
+    assert "OK" in report
+
+
+# --------------------------------------------------------------------------- #
+# Sources whose public endpoints are picky about their request shape
+# --------------------------------------------------------------------------- #
+
+def test_fetch_arxiv_encodes_spaces_as_plus_and_filters_by_date(monkeypatch):
+    payload = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+      <entry><id>http://arxiv.org/abs/1</id><title>Volunteer computing at scale</title>
+        <summary>d</summary><published>2026-10-10T00:00:00Z</published></entry>
+      <entry><id>http://arxiv.org/abs/2</id><title>Too old</title>
+        <summary>d</summary><published>2026-01-01T00:00:00Z</published></entry>
+    </feed>"""
+    seen = {}
+
+    def fake(url, **kwargs):
+        seen["url"] = url
+        return payload
+
+    monkeypatch.setattr(rd, "http_request", fake)
+    cfg = _config(arxiv_queries=['cat:cs.DC AND all:"volunteer computing"'])
+    out = rd.fetch_arxiv(cfg, _ctx())
+
+    search = seen["url"].split("search_query=", 1)[1].split("&", 1)[0]
+    assert "+AND+" in search and "%20" not in search  # arXiv 400s on %20
+    assert [c.url for c in out] == ["http://arxiv.org/abs/1"]
+
+
+def test_fetch_lobsters_uses_tag_feeds_and_keyword_filter(monkeypatch):
+    payload = json.dumps([
+        {"title": "BOINC grid news", "url": "https://ex.com/a", "score": 12,
+         "created_at": "2026-10-10T00:00:00.000-05:00", "description": ""},
+        {"title": "Unrelated high scorer", "url": "https://ex.com/b", "score": 30,
+         "created_at": "2026-10-10T00:00:00.000-05:00", "description": ""},
+        {"title": "BOINC but downvoted", "url": "https://ex.com/c", "score": 1,
+         "created_at": "2026-10-10T00:00:00.000-05:00", "description": ""},
+    ]).encode()
+    seen = {}
+
+    def fake(url, **kwargs):
+        seen["url"] = url
+        return payload
+
+    monkeypatch.setattr(rd, "http_request", fake)
+    cfg = _config(lobsters_tags=["distributed"], keywords=["boinc"])
+    out = rd.fetch_lobsters(cfg, _ctx())
+
+    assert seen["url"] == "https://lobste.rs/t/distributed.json"  # not /search.json
+    assert [c.url for c in out] == ["https://ex.com/a"]
+    assert out[0].signal == "12 pts · t/distributed"
+
+
+def test_fetch_lobsters_is_a_noop_without_tags():
+    assert rd.fetch_lobsters(_config(keywords=["boinc"]), _ctx()) == []
+
+
+REDDIT_ATOM = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+  <entry><title>New BOINC project</title>
+    <link href="https://www.reddit.com/r/BOINC/comments/x/new/"/>
+    <content type="html">&lt;p&gt;a volunteer computing project&lt;/p&gt;</content>
+    <updated>2026-10-10T00:00:00Z</updated></entry>
+  <entry><title>Off topic</title>
+    <link href="https://www.reddit.com/r/BOINC/comments/y/off/"/>
+    <content type="html">nothing relevant</content>
+    <updated>2026-10-10T00:00:00Z</updated></entry>
+</feed>"""
+
+
+def test_fetch_reddit_reads_the_atom_feed(monkeypatch):
+    seen = {}
+
+    def fake(url, **kwargs):
+        seen["url"] = url
+        return REDDIT_ATOM
+
+    monkeypatch.setattr(rd, "http_request", fake)
+    cfg = _config(reddit_subreddits=["BOINC"], keywords=["volunteer computing"])
+    out = rd.fetch_reddit(cfg, _ctx())
+
+    assert seen["url"] == "https://www.reddit.com/r/BOINC/.rss"  # not .json
+    assert len(out) == 1
+    assert out[0].url == "https://reddit.com/r/BOINC/comments/x/new"  # www. normalised away
+    assert out[0].published == "2026-10-10"
+
+
+def test_fetch_bluesky_uses_the_read_host(monkeypatch):
+    payload = json.dumps({"posts": [{
+        "uri": "at://did:plc:x/app.bsky.feed.post/abc",
+        "author": {"handle": "someone.bsky.social"},
+        "record": {"text": "BOINC news", "createdAt": "2026-10-10T00:00:00Z"},
+        "likeCount": 4, "repostCount": 1,
+    }]}).encode()
+    seen = {}
+
+    def fake(url, **kwargs):
+        seen["url"] = url
+        return payload
+
+    monkeypatch.setattr(rd, "http_request", fake)
+    out = rd.fetch_bluesky(_config(bluesky_queries=["BOINC"]), _ctx())
+
+    assert "api.bsky.app" in seen["url"]
+    assert "public.api" not in seen["url"]  # that host 403s
+    assert out[0].url == "https://bsky.app/profile/someone.bsky.social/post/abc"
+    assert out[0].signal == "5★"
