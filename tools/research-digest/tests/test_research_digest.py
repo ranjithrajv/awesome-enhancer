@@ -68,6 +68,7 @@ def test_build_entry_with_and_without_description():
 def _config(**overrides):
     cfg = dict(rd.DEFAULTS)
     cfg.update(overrides)
+    cfg["request_delay"] = 0  # never sleep in tests
     return cfg
 
 
@@ -128,6 +129,33 @@ def test_dedupe_keeps_first_of_a_run():
     out = rd.dedupe(candidates, set())
     assert len(out) == 1
     assert out[0].title == "first"
+
+
+# --------------------------------------------------------------------------- #
+# Keyword gate (compensates for the missing relevance model)
+# --------------------------------------------------------------------------- #
+
+def test_keyword_gate_drops_off_topic_hacker_news():
+    cfg = _config(keywords=["boinc"], keyword_gate=["Hacker News"])
+    candidates = [
+        rd.Candidate(url="https://a", title="BOINC hits a milestone", source="Hacker News"),
+        rd.Candidate(url="https://b", title="Something is falling apart at GNOME", source="Hacker News"),
+        rd.Candidate(url="https://c", title="Some repo", source="GitHub"),
+    ]
+    assert [c.url for c in rd.apply_keyword_gate(candidates, cfg)] == ["https://a", "https://c"]
+
+
+def test_keyword_gate_matches_the_description_too():
+    cfg = _config(keywords=["citizen science"], keyword_gate=["Hacker News"])
+    cand = rd.Candidate(url="https://a", title="Untitled",
+                        description="A citizen science project", source="Hacker News")
+    assert rd.apply_keyword_gate([cand], cfg) == [cand]
+
+
+def test_keyword_gate_is_a_noop_when_unconfigured():
+    cand = rd.Candidate(url="https://a", title="anything", source="Hacker News")
+    assert rd.apply_keyword_gate([cand], _config(keywords=[], keyword_gate=["Hacker News"])) == [cand]
+    assert rd.apply_keyword_gate([cand], _config(keywords=["boinc"], keyword_gate=[])) == [cand]
 
 
 def test_rank_and_cap_normalises_and_caps_per_source():

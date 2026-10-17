@@ -81,6 +81,13 @@ DEFAULTS: dict = {
     "exclude_sections": [],
     "default_section": "",
     "readme_files": ["README.md"],
+    # Sources whose candidates must mention one of `keywords` in their title or
+    # description. Query-based sources such as Hacker News are noisy without a
+    # model to judge relevance, so gate them by default.
+    "keyword_gate": ["Hacker News"],
+    # Seconds to wait between requests to the same host (Reddit and Mastodon
+    # answer 429 if hammered).
+    "request_delay": 1.0,
     # Hacker News
     "hn_queries": [],
     "min_hn_points": 3,
@@ -123,6 +130,13 @@ def load_config(path: Path) -> dict:
 
 def log(msg: str) -> None:
     print(msg, file=sys.stderr)
+
+
+def _pause(cfg: dict) -> None:
+    """Polite delay between requests to a rate-limited host."""
+    delay = float(cfg.get("request_delay") or 0)
+    if delay > 0:
+        time.sleep(delay)
 
 
 # --------------------------------------------------------------------------- #
@@ -520,6 +534,7 @@ def fetch_reddit(cfg: dict, ctx: Context) -> list:
                 source="Reddit", signal=f"r/{sub} · {', '.join(hits[:2])}",
                 score=2.0 * len(hits), published=published,
             ))
+        _pause(cfg)
     return out
 
 
@@ -544,6 +559,7 @@ def fetch_mastodon(cfg: dict, ctx: Context) -> list:
                     description="", source="Mastodon",
                     signal=f"#{tag} · {int(score)}★", score=score, published=created,
                 ))
+            _pause(cfg)
     return out
 
 
@@ -649,6 +665,31 @@ def dedupe(candidates: list, known: set) -> list:
         seen.add(key)
         out.append(cand)
     return out
+
+
+def apply_keyword_gate(candidates: list, cfg: dict) -> list:
+    """Drop candidates from noisy sources unless they mention a keyword.
+
+    Hacker News in particular returns whatever Algolia matches, and without a
+    model the digest cannot tell an email app from a distributed-computing
+    project, so those sources are gated against the configured keywords.
+    """
+    gated = set(cfg.get("keyword_gate") or [])
+    keywords = [k.lower() for k in cfg["keywords"] if k]
+    if not gated or not keywords:
+        return candidates
+    kept: list = []
+    dropped: dict = {}
+    for cand in candidates:
+        if cand.source in gated:
+            blob = f"{cand.title} {cand.description}".lower()
+            if not any(k in blob for k in keywords):
+                dropped[cand.source] = dropped.get(cand.source, 0) + 1
+                continue
+        kept.append(cand)
+    for source, count in sorted(dropped.items()):
+        log(f"keyword gate dropped {count} {source} candidate(s)")
+    return kept
 
 
 def _decay(published: str, today: date, half_life_days: int) -> float:
@@ -930,7 +971,8 @@ def main(argv=None) -> int:
         token=os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or "",
     )
 
-    raw = collect(cfg, ctx)
+    collected = collect(cfg, ctx)
+    raw = apply_keyword_gate(collected, cfg)
     known = repo_urls(root) | prior_issue_urls(root, args.label)
     log(f"dedupe baseline: {len(known)} known URLs")
     unique = dedupe(raw, known)
@@ -945,7 +987,7 @@ def main(argv=None) -> int:
             if not cand.section:
                 cand.section = fallback_section
 
-    meta = {"raw": len(raw), "unique": len(unique), "ranked": len(shown),
+    meta = {"raw": len(collected), "unique": len(unique), "ranked": len(shown),
             "today": today.isoformat(), "llm_note": llm_note}
     if llm_note and args.out:
         print(f"::warning::LLM ranking unavailable: {llm_note}")
