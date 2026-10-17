@@ -49,5 +49,6 @@
     "vite-plugin-dts": "latest",
     "vite-plus": "^0.1.11",
     "vitest": "^4.1.12"
-  }
+  },
+  "dependencies": {}
 }

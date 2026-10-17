@@ -1,0 +1,10 @@
+{
+  "$comment": "Advisories with no fix available from this repository. The audit gate runs at --level=high (.github/workflows/bun.yml), so anything new at high or critical fails the build. Every entry needs a reason and an id.",
+  "allow": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "reason": "No fixed release exists: 3.0.3 is the newest version published, and bun does not support range-keyed overrides, so the vulnerable 3.x line cannot be swapped without forcing an incompatible major onto the micromatch/fast-glob chain."
+    }
+  ]
+}

@@ -40,7 +40,7 @@ jobs:
         run: bun install
 
       - name: Run security audit
-        run: bun audit --audit-level=critical
+        run: bun tools/security/audit-gate.mjs --level high --summary "$GITHUB_STEP_SUMMARY"
 
   test:
     name: Test
