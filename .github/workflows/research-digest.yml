@@ -40,6 +40,10 @@ on:
         description: Where accepted/rejected history is stored in the caller repository.
         type: string
         default: .github/research-digest-state.json
+      close-after-days:
+        description: Close older labelled digest issues than this, keeping the rolling one.
+        type: number
+        default: 30
       engine-repository:
         description: Repository that holds the digest engine.
         type: string
@@ -172,3 +176,28 @@ jobs:
               --body-file "$RUNNER_TEMP/digest.md" \
               --label "${{ inputs.label }}"
           fi
+
+      - name: Close superseded digests
+        if: ${{ !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          keep="${{ steps.issue.outputs.number }}"
+          if [ -z "$keep" ]; then
+            keep=$(gh issue list --label "${{ inputs.label }}" --state open \
+              --limit 1 --json number --jq '.[0].number // ""')
+          fi
+          cutoff=$(date -u -d "${{ inputs.close-after-days }} days ago" +%s)
+          closed=0
+          while IFS=$'\t' read -r num created; do
+            [ -z "${num:-}" ] && continue
+            [ "$num" = "$keep" ] && continue
+            age=$(date -u -d "$created" +%s 2>/dev/null || echo 0)
+            if [ "$age" -gt 0 ] && [ "$age" -lt "$cutoff" ]; then
+              gh issue close "$num" --comment "Superseded by #${keep}, which now carries the rolling digest." || true
+              closed=$((closed + 1))
+            fi
+          done < <(gh issue list --label "${{ inputs.label }}" --state open --limit 100 \
+                     --json number,createdAt --jq '.[] | "\(.number)\t\(.createdAt)"')
+          echo "::notice::Closed ${closed} superseded digest issue(s) older than ${{ inputs.close-after-days }} days"
