@@ -19,6 +19,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
+    ignore:
+      # effect 4 reworks Context.Tag/Effect typings and stops packages/core
+      # compiling, so it would sit red forever. Take that bump deliberately.
+      - dependency-name: "effect"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
