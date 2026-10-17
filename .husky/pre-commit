@@ -7,35 +7,39 @@ set -e
 echo "🔍 Running pre-commit checks (mirroring GitHub Actions CI)..."
 echo ""
 
-# 1. Version check (release requirement)
+# 1. Security audit (CI: bun.yml)
+echo "✓ Running security audit..."
+bun audit
+
+# 2. Version check (release requirement)
 echo "✓ Checking version consistency..."
 bun --filter='@awesome-enhancer/core' run check-version
 
-# 2. Tests (CI: bun.yml)
+# 3. Tests (CI: bun.yml)
 echo "✓ Running tests with coverage..."
 bun run test:coverage
 
-# 3. Type checking (CI: bun.yml, release.yml)
+# 4. Type checking (CI: bun.yml, release.yml)
 echo "✓ Running typecheck..."
 bun run typecheck
 
-# 4. Linting (CI: bun.yml, release.yml)
+# 5. Linting (CI: bun.yml, release.yml)
 echo "✓ Running lint..."
 bun run lint:all
 
-# 5. Build + bundle verification (CI: bun.yml, pages.yml)
+# 6. Build + bundle verification (CI: bun.yml, pages.yml)
 echo "✓ Running build (includes web bundle verification)..."
 bun run build
 
-# 6. Formatting check (CI: implicit in code quality)
+# 7. Formatting check (CI: implicit in code quality)
 echo "✓ Checking formatting..."
 bun run format --check
 
-# 7. Dead code/unused exports check (CI: code quality)
+# 8. Dead code/unused exports check (CI: code quality)
 echo "✓ Checking for unused code (knip)..."
 bunx knip --exclude dependencies,unlisted,binaries
 
-# 8. E2E smoke test (CI: bun.yml e2e job)
+# 9. E2E smoke test (CI: bun.yml e2e job)
 echo "✓ Running E2E smoke test..."
 bun run dev --help > /dev/null
 

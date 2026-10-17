@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "typecheck": "bun run --filter='@awesome-enhancer/*' typecheck",
     "clean": "bun run --filter='@awesome-enhancer/*' clean",
-    "clean:all": "bun run clean && rm -rf node_modules packages/*/node_modules"
+    "clean:all": "bun run clean && rm -rf node_modules packages/*/node_modules",
+    "audit": "bun audit"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",

@@ -21,6 +21,27 @@ on:
       - '.github/workflows/**'
 
 jobs:
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run security audit
+        run: bun audit
+
   test:
     name: Test
     runs-on: ${{ matrix.os }}
