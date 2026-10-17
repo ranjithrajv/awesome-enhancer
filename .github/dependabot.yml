@@ -1,0 +1,34 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # The audit gate in .github/workflows/bun.yml runs at --audit-level=critical.
+  # A handful of high advisories remain unfixable from here (braces has no fixed
+  # release; @actions/http-client pins undici 5.x), so let these arrive as PRs.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    labels:
+      - "maintenance"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
