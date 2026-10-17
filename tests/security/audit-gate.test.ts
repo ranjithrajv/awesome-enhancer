@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { evaluate, findingId, render } from '../../tools/security/audit-gate.mjs';
+import { evaluate, findingId, render } from '../../tools/security/audit-gate-lib';
 
 const audit = {
   braces: [

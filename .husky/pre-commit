@@ -9,7 +9,7 @@ echo ""
 
 # 1. Security audit (CI: bun.yml)
 echo "✓ Running security audit..."
-bun tools/security/audit-gate.mjs --level high
+bun tools/security/audit-gate.ts --level high
 
 # 2. Version check (release requirement)
 echo "✓ Checking version consistency..."
