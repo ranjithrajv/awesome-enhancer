@@ -130,3 +130,49 @@ def test_insert_resolves_heading_without_emoji():
     assert created is False
     assert new_text.index("## 🧪 Projects") < new_text.index("- [b](https://b.example)")
     assert "## Projects\n" not in new_text  # no duplicate heading created
+
+
+# --------------------------------------------------------------------------- #
+# Accept vs reject
+# --------------------------------------------------------------------------- #
+
+BODY_WITH_REJECTS = (
+    "# Research digest\n\n"
+    "## Other candidates\n\n"
+    "- [x] **[Keep me](https://keep.example)** — RSS · 2 pts\n"
+    "- [ ] **[Not ticked](https://unticked.example)** — RSS · 1 pts\n\n"
+    "## Not interested\n\n"
+    "- [x] [Never again](https://never.example)\n"
+    "- [ ] [Maybe later](https://later.example)\n\n"
+    '<!-- digest-payload\n{"version": 2, "candidates": []}\n-->\n'
+)
+
+
+def test_rejects_are_separated_from_accepts():
+    assert ad.checked_urls(BODY_WITH_REJECTS) == ["https://keep.example"]
+    assert ad.rejected_urls(BODY_WITH_REJECTS) == ["https://never.example"]
+
+
+def test_ticked_reject_is_not_written_into_the_readme(tmp_path, monkeypatch):
+    readme = tmp_path / "README.md"
+    readme.write_text(README, encoding="utf-8")
+    body = tmp_path / "body.md"
+    body.write_text(BODY_WITH_REJECTS, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", ["apply_digest", "--root", str(tmp_path),
+                                     "--body-file", str(body), "--apply"])
+    ad.main()
+
+    text = readme.read_text(encoding="utf-8")
+    assert "never.example" not in text   # rejected, not added
+    assert "unticked.example" not in text
+
+
+def test_update_state_records_accepted_and_rejected(tmp_path):
+    path = tmp_path / "state.json"
+    assert ad.update_state(path, ["https://a.example"], ["https://b.example"]) is True
+    state = ad.load_state(path)
+    assert state["https://a.example"]["status"] == "accepted"
+    assert state["https://b.example"]["status"] == "rejected"
+    # unchanged on a repeat run, so no needless commit
+    assert ad.update_state(path, ["https://a.example"], []) is False

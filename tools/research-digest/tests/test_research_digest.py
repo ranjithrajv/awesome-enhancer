@@ -172,7 +172,8 @@ def test_keyword_gate_is_a_noop_when_unconfigured():
 
 
 def test_rank_and_cap_normalises_and_caps_per_source():
-    cfg = _config(max_per_source=2, source_weights={"GitHub": 0.5})
+    # relevance_weight=0 isolates the signal behaviour from topical overlap
+    cfg = _config(max_per_source=2, source_weights={"GitHub": 0.5}, relevance_weight=0)
     candidates = [
         rd.Candidate(url="https://hn/1", source="Hacker News", score=100),
         rd.Candidate(url="https://hn/2", source="Hacker News", score=50),
@@ -294,7 +295,7 @@ def test_render_roundtrips_through_apply_payload():
     report, payload = rd.render(candidates, _config(), True, meta)
 
     assert "# Research digest — 2026-10-17" in report
-    assert "Ranked by LLM." in report
+    assert "Ranked by model." in report
     assert r"- [A \[beta\]](https://example.com/a) - desc" in report
     assert len(payload) == 2
 
@@ -308,7 +309,7 @@ def test_render_handles_no_candidates():
     report, payload = rd.render([], _config(), False, {"raw": 0, "unique": 0, "ranked": 0,
                                                        "today": "2026-10-17"})
     assert "No new candidates found this week." in report
-    assert "Heuristic ranking only." in report
+    assert "keyword overlap" in report
     assert payload == []
 
 
@@ -317,7 +318,7 @@ def test_render_surfaces_an_llm_failure():
     meta = {"raw": 1, "unique": 1, "ranked": 1, "today": "2026-10-17",
             "llm_note": "JSONDecodeError (response began: OK)"}
     report, _ = rd.render(candidates, _config(), False, meta)
-    assert "LLM unavailable" in report
+    assert "Model unavailable" in report
     assert "OK" in report
 
 
@@ -388,6 +389,8 @@ REDDIT_ATOM = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"
 
 
 def test_fetch_reddit_reads_the_atom_feed(monkeypatch):
+    monkeypatch.delenv("REDDIT_CLIENT_ID", raising=False)
+    monkeypatch.delenv("REDDIT_CLIENT_SECRET", raising=False)
     seen = {}
 
     def fake(url, **kwargs):
@@ -426,3 +429,158 @@ def test_fetch_bluesky_uses_the_read_host(monkeypatch):
     assert "public.api" not in seen["url"]  # that host 403s
     assert out[0].url == "https://bsky.app/profile/someone.bsky.social/post/abc"
     assert out[0].signal == "5★"
+
+
+# --------------------------------------------------------------------------- #
+# Lexical relevance (the no-model ranking signal)
+# --------------------------------------------------------------------------- #
+
+def test_list_profile_weighs_keywords_above_description():
+    profile = rd.list_profile(_config(keywords=["boinc"], list_description="a list about grids"))
+    assert profile["boinc"] > profile["grids"]
+
+
+def test_lexical_relevance_rewards_overlap():
+    profile = rd.list_profile(_config(keywords=["volunteer computing", "boinc"]))
+    hit = rd.Candidate(url="https://a", title="BOINC volunteers wanted",
+                       description="volunteer computing news")
+    miss = rd.Candidate(url="https://b", title="Gardening tips", description="tomatoes")
+    assert rd.lexical_relevance(hit, profile)[0] > rd.lexical_relevance(miss, profile)[0]
+    assert rd.lexical_relevance(miss, profile) == (0.0, [])
+
+
+def test_label_relevance_fills_the_buckets_without_a_model():
+    cfg = _config(keywords=["boinc"], list_description="")
+    profile = rd.list_profile(cfg)
+    strong = rd.Candidate(url="https://a", title="BOINC", description="boinc")
+    weak = rd.Candidate(url="https://b", title="random")
+    rd.label_relevance(strong, cfg, profile)
+    rd.label_relevance(weak, cfg, profile)
+    assert strong.relevance in ("high", "medium")
+    assert strong.reason.startswith("matches:")
+    assert weak.relevance == "low"
+    assert weak.reason == "no overlap with the list's keywords"
+
+
+def test_relevance_dominates_the_rank_when_weighted():
+    cfg = _config(max_per_source=5, relevance_weight=1.0, keywords=["boinc"])
+    topical = rd.Candidate(url="https://a", source="GitHub", score=1, title="BOINC client")
+    popular = rd.Candidate(url="https://b", source="GitHub", score=100, title="Unrelated thing")
+    ranked = rd.rank_and_cap([topical, popular], cfg, date(2026, 10, 17))
+    assert ranked[0].url == "https://a"
+
+
+# --------------------------------------------------------------------------- #
+# State file
+# --------------------------------------------------------------------------- #
+
+def test_load_and_save_state_roundtrip(tmp_path):
+    path = tmp_path / "state.json"
+    assert rd.load_state(path) == {}
+    assert rd.save_state(path, {"https://a": {"status": "new"}}) is True
+    assert rd.load_state(path)["https://a"]["status"] == "new"
+    assert rd.save_state(path, rd.load_state(path)) is False  # unchanged, no write
+
+
+def test_resurfaced_urls_only_when_the_signal_grows():
+    state = {"https://a": {"status": "rejected", "last_score": 10.0}}
+    flat = [rd.Candidate(url="https://a", score=10.0)]
+    grown = [rd.Candidate(url="https://a", score=20.0)]
+    assert rd.resurfaced_urls(flat, state, 1.25) == set()
+    assert rd.resurfaced_urls(grown, state, 1.25) == {"https://a"}
+
+
+def test_record_sightings_tracks_counts_and_status():
+    state = {"https://a": {"first_seen": "2026-10-01", "times_seen": 2,
+                           "status": "rejected", "last_score": 1}}
+    cands = [rd.Candidate(url="https://a", title="A", score=5),
+             rd.Candidate(url="https://b", title="B", score=7)]
+    rd.record_sightings(state, cands, date(2026, 10, 17))
+    assert state["https://a"]["times_seen"] == 3
+    assert cands[0].times_seen == 3
+    assert cands[0].status == "rejected"
+    assert state["https://b"]["times_seen"] == 1
+    assert state["https://b"]["status"] == "new"
+    assert cands[1].times_seen == 1
+
+
+# --------------------------------------------------------------------------- #
+# Rolling issue
+# --------------------------------------------------------------------------- #
+
+def test_merge_issue_body_keeps_one_payload_and_collapses_history():
+    week1 = ('# Research digest — 2026-10-12\n\n- [ ] **A**\n\n'
+             '<!-- digest-payload\n{"version": 2, "candidates": [{"url": "https://a"}]}\n-->\n')
+    week2 = ('# Research digest — 2026-10-19\n\n- [ ] **B**\n\n'
+             '<!-- digest-payload\n{"version": 2, "candidates": [{"url": "https://b"}]}\n-->\n')
+    merged = rd.merge_issue_body(week1, week2)
+
+    assert merged.count("digest-payload") == 1      # only the newest week carries one
+    assert "Previous weeks (1)" in merged
+    assert "2026-10-19" in merged and "2026-10-12" in merged
+    assert apply_digest.checked_urls(merged) == []
+    assert "https://b" in apply_digest.parse_payload(merged)
+
+
+def test_strip_payloads_removes_every_block():
+    body = 'x\n<!-- digest-payload\n{}\n-->\ny\n<!-- digest-payload {"a":1} -->\nz'
+    out = rd.strip_payloads(body)
+    assert "digest-payload" not in out
+    assert "x" in out and "z" in out
+
+
+# --------------------------------------------------------------------------- #
+# Reddit OAuth
+# --------------------------------------------------------------------------- #
+
+def test_fetch_reddit_uses_oauth_when_credentials_exist(monkeypatch):
+    monkeypatch.setenv("REDDIT_CLIENT_ID", "id")
+    monkeypatch.setenv("REDDIT_CLIENT_SECRET", "secret")
+    calls = []
+
+    def fake(url, headers=None, method="GET", data=None, **kwargs):
+        calls.append((url, headers or {}))
+        if "access_token" in url:
+            return b'{"access_token": "tok"}'
+        return json.dumps({"data": {"children": [{"data": {
+            "title": "BOINC news", "selftext": "volunteer computing", "score": 42,
+            "created_utc": 1791000000, "url_overridden_by_dest": "https://example.org/x",
+        }}]}}).encode()
+
+    monkeypatch.setattr(rd, "http_request", fake)
+    cfg = _config(reddit_subreddits=["BOINC"], keywords=["volunteer computing"])
+    out = rd.fetch_reddit(cfg, _ctx())
+
+    assert any("access_token" in url for url, _ in calls)
+    assert any(url.startswith("https://oauth.reddit.com") for url, _ in calls)
+    assert out and out[0].signal == "r/BOINC · 42↑"
+
+
+def test_fetch_reddit_falls_back_to_rss_without_credentials(monkeypatch):
+    monkeypatch.delenv("REDDIT_CLIENT_ID", raising=False)
+    monkeypatch.delenv("REDDIT_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr(rd, "http_request", lambda *a, **k: REDDIT_ATOM)
+    cfg = _config(reddit_subreddits=["BOINC"], keywords=["volunteer computing"])
+    out = rd.fetch_reddit(cfg, _ctx())
+    assert [c.url for c in out] == ["https://reddit.com/r/BOINC/comments/x/new"]
+
+
+# --------------------------------------------------------------------------- #
+# Doctor
+# --------------------------------------------------------------------------- #
+
+def test_doctor_reports_a_row_per_query(monkeypatch):
+    monkeypatch.setattr(rd, "fetch_hn", lambda cfg, ctx: [rd.Candidate(url="https://a")])
+    cfg = _config(hn_queries=["volunteer computing"])
+    out = rd.doctor(cfg, _ctx())
+    assert "| Hacker News | `volunteer computing` | 1 |" in out
+
+
+def test_doctor_reports_errors_instead_of_raising(monkeypatch):
+    def boom(cfg, ctx):
+        raise rd.URLError("down")
+
+    monkeypatch.setattr(rd, "fetch_arxiv", boom)
+    cfg = _config(arxiv_queries=["all:whatever"])
+    out = rd.doctor(cfg, _ctx())
+    assert "error: URLError" in out

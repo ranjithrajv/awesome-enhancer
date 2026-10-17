@@ -22,6 +22,7 @@ skipped so a single dead source never fails the run.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -29,7 +30,8 @@ import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -93,6 +95,17 @@ DEFAULTS: dict = {
     # Seconds to wait between requests to the same host (Reddit and Mastodon
     # answer 429 if hammered).
     "request_delay": 1.0,
+    # Lexical relevance: how much topical overlap with the list profile counts
+    # towards the rank, and the cut-offs that label a candidate high/medium.
+    # This is what fills the digest's relevance sections when no model runs.
+    "relevance_weight": 0.35,
+    "relevance_high": 0.45,
+    "relevance_medium": 0.28,
+    # Persistent state (accepted/rejected history). Empty disables it.
+    "state_file": ".github/research-digest-state.json",
+    # A rejected candidate is offered again only if its signal grows by this
+    # factor.
+    "resurface_boost": 1.25,
     # Hacker News
     "hn_queries": [],
     "min_hn_points": 3,
@@ -160,7 +173,8 @@ def http_request(url, headers=None, timeout=DEFAULT_TIMEOUT, method="GET",
                 return resp.read()
         except HTTPError as exc:
             last = exc
-            if exc.code in (429, 500, 502, 503, 504) and attempt < retries - 1:
+            # GitHub answers 403 (not 429) once a rate limit is exhausted.
+            if _retryable(exc) and attempt < retries - 1:
                 time.sleep(2 ** attempt)
                 continue
             break
@@ -171,6 +185,21 @@ def http_request(url, headers=None, timeout=DEFAULT_TIMEOUT, method="GET",
                 continue
             break
     raise last if last is not None else RuntimeError(f"request failed: {url}")
+
+
+def _retryable(exc: HTTPError) -> bool:
+    if exc.code in (429, 500, 502, 503, 504):
+        return True
+    if exc.code != 403:
+        return False
+    headers = getattr(exc, "headers", None)
+    remaining = ""
+    if headers is not None:
+        try:
+            remaining = str(headers.get("x-ratelimit-remaining") or "").strip()
+        except Exception:  # noqa: BLE001
+            remaining = ""
+    return remaining == "0"
 
 
 def http_json(url, headers=None, timeout=DEFAULT_TIMEOUT, method="GET", data=None):
@@ -247,6 +276,215 @@ def _xml_root(data: bytes):
     which the XML spec forbids and expat rejects.
     """
     return ET.fromstring(data.lstrip(b"\xef\xbb\xbf \t\r\n"))
+
+
+# --------------------------------------------------------------------------- #
+# Lexical relevance (stands in for a model when none is available)
+# --------------------------------------------------------------------------- #
+
+_WORD_RE = re.compile(r"[a-z][a-z0-9+#.]*")
+STOPWORDS = {
+    "the", "and", "for", "with", "that", "this", "from", "into", "your", "you",
+    "are", "was", "were", "will", "can", "has", "have", "its", "not", "but",
+    "all", "any", "our", "out", "use", "using", "via", "how", "why", "what",
+    "when", "who", "new", "now", "get", "got", "one", "two", "more", "most",
+    "like", "just", "also", "than", "then", "them", "they", "here", "there",
+    "http", "https", "www", "com", "org", "net", "github", "reddit", "show",
+    "ask", "about", "over", "under", "into", "onto", "their", "would", "could",
+}
+# Saturating curve: score = weight / (weight + SCALE). One curated keyword hit
+# lands around 1/3 ("maybe"), two around 1/2 ("high").
+RELEVANCE_SCALE = 8.0
+
+
+def _tokens(text) -> list:
+    return [t for t in _WORD_RE.findall(str(text or "").lower())
+            if len(t) > 2 and t not in STOPWORDS]
+
+
+def list_profile(cfg: dict) -> dict:
+    """Weighted term profile of the list, from its keywords and description."""
+    profile: Counter = Counter()
+    for term in cfg.get("keywords") or []:
+        for token in _tokens(term):
+            profile[token] += 4
+    for token in _tokens(cfg.get("list_description") or ""):
+        profile[token] += 1
+    return dict(profile)
+
+
+def lexical_relevance(cand, profile: dict) -> tuple:
+    """Topical overlap between a candidate and the list profile, in 0..1."""
+    if not profile:
+        return 0.0, []
+    terms = _tokens(f"{cand.title} {cand.description} {cand.source}")
+    if not terms:
+        return 0.0, []
+    matched = sorted({t for t in terms if t in profile})
+    if not matched:
+        return 0.0, []
+    weight = sum(profile[t] for t in matched)
+    return round(weight / (weight + RELEVANCE_SCALE), 4), matched
+
+
+def label_relevance(cand, cfg: dict, profile: dict) -> None:
+    """Fill in relevance/reason from the lexical score (no-model fallback)."""
+    score, matched = lexical_relevance(cand, profile)
+    cand.relevance_score = score
+    cand.matched_terms = matched[:6]
+    if score >= float(cfg["relevance_high"]):
+        cand.relevance = "high"
+    elif score >= float(cfg["relevance_medium"]):
+        cand.relevance = "medium"
+    else:
+        cand.relevance = "low"
+    if matched:
+        cand.reason = "matches: " + ", ".join(matched[:5])
+    else:
+        cand.reason = "no overlap with the list's keywords"
+
+
+# --------------------------------------------------------------------------- #
+# Persistent state (accepted / rejected history)
+# --------------------------------------------------------------------------- #
+
+def load_state(path) -> dict:
+    if not path or not Path(path).exists():
+        return {}
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        log(f"state unreadable ({path}): {exc}")
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_state(path, state: dict) -> bool:
+    """Write state if it changed. Returns True when it did."""
+    if not path:
+        return False
+    new = json.dumps(state, indent=2, sort_keys=True) + "\n"
+    target = Path(path)
+    if target.exists() and target.read_text(encoding="utf-8") == new:
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(new, encoding="utf-8")
+    return True
+
+
+def resurfaced_urls(candidates: list, state: dict, boost: float) -> set:
+    """Rejected URLs whose signal has grown enough to be worth showing again."""
+    out: set = set()
+    for cand in candidates:
+        entry = state.get(dedupe_key(cand.url))
+        if not entry or entry.get("status") != "rejected":
+            continue
+        last = float(entry.get("last_score") or 0)
+        if last > 0 and cand.score > last * max(boost, 1.0):
+            out.add(dedupe_key(cand.url))
+    return out
+
+
+def record_sightings(state: dict, shown: list, today) -> None:
+    """Update first_seen/times_seen/last_score for everything offered."""
+    for cand in shown:
+        key = dedupe_key(cand.url)
+        entry = state.get(key)
+        if entry is None:
+            state[key] = {
+                "first_seen": today.isoformat(), "times_seen": 1,
+                "last_score": cand.score, "status": "new",
+                "title": (cand.title or cand.url)[:120],
+            }
+            cand.times_seen, cand.status = 1, "new"
+        else:
+            entry["times_seen"] = int(entry.get("times_seen") or 0) + 1
+            entry["last_score"] = cand.score
+            entry["last_seen"] = today.isoformat()
+            entry.setdefault("title", (cand.title or cand.url)[:120])
+            cand.times_seen = entry["times_seen"]
+            cand.status = str(entry.get("status") or "new")
+
+
+# --------------------------------------------------------------------------- #
+# Rolling digest issue
+# --------------------------------------------------------------------------- #
+
+def strip_payloads(body: str) -> str:
+    return re.sub(r"<!--\s*digest-payload\s*\{.*?\}\s*-->\s*", "", body or "", flags=re.S)
+
+
+def merge_issue_body(existing: str, new_week: str, keep: int = 6) -> str:
+    """New week on top, previous weeks collapsed and stripped of their payloads.
+
+    Only the newest week carries a ``digest-payload`` block, so the apply step
+    always reads exactly one set of candidates.
+    """
+    new_week = new_week.strip()
+    previous = strip_payloads(existing).strip()
+    if not previous:
+        return new_week + "\n"
+    weeks = [w.strip() for w in re.split(r"\n(?=# Research digest )", previous) if w.strip()]
+    weeks = weeks[:keep]
+    if not weeks:
+        return new_week + "\n"
+    history = "\n\n".join(weeks)
+    return (f"{new_week}\n\n<details>\n<summary>Previous weeks ({len(weeks)})</summary>\n\n"
+            f"{history}\n\n</details>\n")
+
+
+# --------------------------------------------------------------------------- #
+# Query doctor
+# --------------------------------------------------------------------------- #
+
+def doctor(cfg: dict, ctx: Context) -> str:
+    """Report how many candidates each configured query/keyword yields."""
+    rows: list = []
+
+    def count(fetcher, key: str, value: str) -> str:
+        local = dict(cfg)
+        local[key] = [value]
+        try:
+            return str(len(fetcher(local, ctx)))
+        except Exception as exc:  # noqa: BLE001 - diagnostics must not raise
+            return f"error: {type(exc).__name__}"
+
+    for query in cfg["hn_queries"]:
+        rows.append(("Hacker News", query, count(fetch_hn, "hn_queries", query)))
+    for query in cfg["github_queries"]:
+        rows.append(("GitHub", query, count(fetch_github, "github_queries", query)))
+    for topic in cfg["github_topics"]:
+        rows.append(("GitHub topic", topic, count(fetch_github, "github_topics", topic)))
+    for query in cfg["arxiv_queries"]:
+        rows.append(("arXiv", query, count(fetch_arxiv, "arxiv_queries", query)))
+    for sub in cfg["reddit_subreddits"]:
+        rows.append(("Reddit", f"r/{sub}", count(fetch_reddit, "reddit_subreddits", sub)))
+    for tag in cfg["lobsters_tags"]:
+        rows.append(("Lobsters", f"t/{tag}", count(fetch_lobsters, "lobsters_tags", tag)))
+    for query in cfg["bluesky_queries"]:
+        rows.append(("Bluesky", query, count(fetch_bluesky, "bluesky_queries", query)))
+    for feed in cfg["rss_feeds"]:
+        rows.append(("RSS", feed, count(fetch_rss, "rss_feeds", feed)))
+    for instance in cfg["mastodon_instances"]:
+        for tag in cfg["mastodon_tags"]:
+            local = dict(cfg)
+            local["mastodon_instances"], local["mastodon_tags"] = [instance], [tag]
+            try:
+                rows.append(("Mastodon", f"{instance} #{tag}", str(len(fetch_mastodon(local, ctx)))))
+            except Exception as exc:  # noqa: BLE001
+                rows.append(("Mastodon", f"{instance} #{tag}", f"error: {type(exc).__name__}"))
+
+    lines = [
+        "# Digest query doctor", "",
+        f"Window: last {cfg['days_back']} days (since {ctx.since_date}). Counts are candidates "
+        "that survived each source's own filters, before de-duplication.",
+        "", "| Source | Query | Candidates |", "|---|---|---|",
+    ]
+    lines += [f"| {source} | `{esc(query, 70)}` | {n} |" for source, query, n in rows]
+    lines += ["", "Zero is normal for a niche query. Anything that stays zero across runs is worth "
+                  "rewriting or dropping; `keywords` do double duty, driving both the relevance "
+                  "score and the gate."]
+    return "\n".join(lines) + "\n"
 
 
 def _snippet(data, limit: int = 120) -> str:
@@ -334,6 +572,10 @@ class Candidate:
     reason: str = ""
     section: str = ""
     rank_score: float = 0.0
+    relevance_score: float = 0.0
+    matched_terms: list = field(default_factory=list)
+    times_seen: int = 0
+    status: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -341,6 +583,8 @@ class Candidate:
             "source": self.source, "signal": self.signal, "score": self.score,
             "published": self.published, "relevance": self.relevance,
             "reason": self.reason, "section": self.section, "rank_score": self.rank_score,
+            "relevance_score": self.relevance_score, "matched_terms": self.matched_terms,
+            "times_seen": self.times_seen, "status": self.status,
         }
 
 
@@ -519,8 +763,78 @@ def fetch_lobsters(cfg: dict, ctx: Context) -> list:
     return out
 
 
+def _reddit_token() -> str:
+    """Application-only OAuth token, when credentials are configured.
+
+    Unauthenticated `.json` requests are blocked outright and the Atom feed is
+    rate-limited hard, so a token is the only reliable way in.
+    """
+    cid = os.environ.get("REDDIT_CLIENT_ID")
+    secret = os.environ.get("REDDIT_CLIENT_SECRET")
+    if not (cid and secret):
+        return ""
+    basic = base64.b64encode(f"{cid}:{secret}".encode()).decode()
+    try:
+        raw = http_request(
+            "https://www.reddit.com/api/v1/access_token", method="POST",
+            data=urlencode({"grant_type": "client_credentials"}).encode(),
+            headers={"Authorization": f"Basic {basic}",
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            retries=2,
+        )
+        return str(json.loads(raw.decode()).get("access_token") or "")
+    except Exception as exc:  # noqa: BLE001
+        log(f"reddit oauth failed: {exc}")
+        return ""
+
+
+def _fetch_reddit_oauth(cfg: dict, ctx: Context, token: str) -> list:
+    keywords = [k.lower() for k in cfg["keywords"] if k]
+    out = []
+    for sub in cfg["reddit_subreddits"]:
+        url = (f"https://oauth.reddit.com/r/{quote(sub)}/new?"
+               + urlencode({"limit": "25", "raw_json": "1"}))
+        try:
+            data = http_json(url, headers={"Authorization": f"Bearer {token}"})
+        except Exception as exc:  # noqa: BLE001 - one bad subreddit must not stop the rest
+            log(f"reddit oauth fetch failed {sub}: {exc}")
+            continue
+        for child in data.get("data", {}).get("children", []):
+            post = child.get("data", {}) or {}
+            if post.get("stickied") or post.get("over_18"):
+                continue
+            created = _epoch_to_date(post.get("created_utc"))
+            if created and created < ctx.since_date:
+                continue
+            link = post.get("url_overridden_by_dest") or post.get("url") or ""
+            if link.startswith("/"):
+                link = "https://www.reddit.com" + link
+            if not _valid_url(link):
+                continue
+            title = _clean(post.get("title") or "")
+            body = _clean(post.get("selftext") or "")
+            if keywords and not any(k in f"{title} {body}".lower() for k in keywords):
+                continue
+            score = float(post.get("score") or 0)
+            out.append(Candidate(
+                url=normalize_url(link), title=title, description=body[:200],
+                source="Reddit", signal=f"r/{sub} · {int(score)}↑",
+                score=score, published=created,
+            ))
+        _pause(cfg)
+    return out
+
+
 def fetch_reddit(cfg: dict, ctx: Context) -> list:
-    """Reddit via the public Atom feed; the .json API blocks unauthenticated hosts."""
+    """Reddit via OAuth when credentials exist, otherwise the Atom feed."""
+    token = _reddit_token()
+    if token:
+        return _fetch_reddit_oauth(cfg, ctx, token)
+    return _fetch_reddit_rss(cfg, ctx)
+
+
+def _fetch_reddit_rss(cfg: dict, ctx: Context) -> list:
+    """Fallback: the public Atom feed (no vote counts, rate-limited)."""
     keywords = [k.lower() for k in cfg["keywords"] if k]
     out = []
     for sub in cfg["reddit_subreddits"]:
@@ -727,7 +1041,10 @@ def rank_and_cap(candidates: list, cfg: dict, today: date) -> list:
     the merged list is sorted.
     """
     groups: dict = {}
+    profile = list_profile(cfg)
+    relevance_weight = min(max(float(cfg.get("relevance_weight") or 0.0), 0.0), 1.0)
     for cand in candidates:
+        cand.relevance_score = lexical_relevance(cand, profile)[0]
         groups.setdefault(cand.source, []).append(cand)
 
     out: list = []
@@ -739,9 +1056,10 @@ def rank_and_cap(candidates: list, cfg: dict, today: date) -> list:
         top = max((c.score for c in items), default=0.0) or 1.0
         weight = float(cfg["source_weights"].get(source, 1.0))
         for cand in items:
-            base = cand.score / top
-            cand.rank_score = round(weight * base * _decay(cand.published, today,
-                                                           int(cfg["half_life_days"])), 6)
+            signal = cand.score / top
+            blended = (1.0 - relevance_weight) * signal + relevance_weight * cand.relevance_score
+            cand.rank_score = round(weight * blended * _decay(cand.published, today,
+                                                             int(cfg["half_life_days"])), 6)
             out.append(cand)
     out.sort(key=lambda c: c.rank_score, reverse=True)
     return out
@@ -907,13 +1225,16 @@ def render(candidates: list, cfg: dict, used_llm: bool, meta: dict) -> tuple:
     ]
     today = meta["today"]
     lines = [f"# Research digest — {today}", ""]
-    ranking = "Ranked by LLM." if used_llm else "_Heuristic ranking only._"
-    if not used_llm and meta.get("llm_note"):
-        ranking = ("_Heuristic ranking only — LLM unavailable: "
-                   + esc(meta["llm_note"], 140) + "._")
+    if used_llm:
+        ranking = "Ranked by model."
+    else:
+        ranking = "_Ranked by source signal and keyword overlap._"
+        if meta.get("llm_note"):
+            ranking += f" _Model unavailable: {esc(meta['llm_note'], 120)}._"
     lines.append(f"Scanned the last {cfg['days_back']} days: {meta['raw']} raw findings, "
                  f"{meta['unique']} new candidates after dedupe, {meta['ranked']} shown. {ranking}")
-    lines += ["", "Tick a candidate to add it, then the apply workflow opens a pull request.", ""]
+    lines += ["", "Tick a candidate to add it — the apply workflow opens a pull request. "
+                  "Anything ticked under **Not interested** is recorded and not offered again.", ""]
 
     payload = []
     for title, items in groups:
@@ -924,8 +1245,9 @@ def render(candidates: list, cfg: dict, used_llm: bool, meta: dict) -> tuple:
             entry = build_entry(cand)
             if not entry:
                 continue
+            seen = f" · seen {cand.times_seen}×" if cand.times_seen > 1 else ""
             lines.append(f"- [ ] **[{esc(cand.title or cand.url)}]({_md_url(cand.url)})** "
-                         f"— {esc(cand.source, 30)} · {esc(cand.signal, 40)} · `{cand.relevance}`")
+                         f"— {esc(cand.source, 30)} · {esc(cand.signal, 40)} · `{cand.relevance}`{seen}")
             if cand.reason:
                 lines.append(f"  - _{esc(cand.reason, 140)}_")
             if cand.section:
@@ -942,6 +1264,13 @@ def render(candidates: list, cfg: dict, used_llm: bool, meta: dict) -> tuple:
 
     if not candidates:
         lines += ["No new candidates found this week. All clear.", ""]
+
+    if payload:
+        lines += ["## Not interested", "",
+                  "Tick anything you never want suggested again; the apply workflow records it.", ""]
+        for item in payload:
+            lines.append(f"- [ ] [{esc(item['title'] or item['url'], 90)}]({_md_url(item['url'])})")
+        lines.append("")
 
     lines.append("<!-- digest-payload")
     lines.append(json.dumps({"version": VERSION, "candidates": payload}, ensure_ascii=False))
@@ -965,6 +1294,10 @@ def main(argv=None) -> int:
     parser.add_argument("--no-llm", action="store_true", help="Skip LLM re-ranking.")
     parser.add_argument("--today", default="", help="Override today's date (YYYY-MM-DD) for tests.")
     parser.add_argument("--github-output", action="store_true")
+    parser.add_argument("--state", default="", help="State file to read/update (default: config state_file).")
+    parser.add_argument("--doctor", action="store_true", help="Report per-query yield and exit.")
+    parser.add_argument("--merge-into", default="",
+                        help="Merge this week into an existing digest issue body (rolling issue).")
     args = parser.parse_args(argv)
 
     root = Path(args.root)
@@ -986,15 +1319,36 @@ def main(argv=None) -> int:
         token=os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or "",
     )
 
+    if args.doctor:
+        report = doctor(cfg, ctx)
+        if args.out:
+            Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.out).write_text(report, encoding="utf-8")
+        sys.stdout.write(report)
+        return 0
+
     collected = collect(cfg, ctx)
-    raw = apply_keyword_gate(collected, cfg)
+    gated = apply_keyword_gate(collected, cfg)
+
+    state_path = args.state or cfg.get("state_file") or ""
+    state = load_state(state_path)
     known = repo_urls(root) | prior_issue_urls(root, args.label)
+    revived = resurfaced_urls(gated, state, float(cfg.get("resurface_boost") or 1.0))
+    if revived:
+        known -= revived
+        log(f"resurfacing {len(revived)} previously rejected candidate(s)")
     log(f"dedupe baseline: {len(known)} known URLs")
-    unique = dedupe(raw, known)
+
+    unique = dedupe(gated, known)
     ranked = rank_and_cap(unique, cfg, today)
     shown = ranked[: int(cfg["max_llm_candidates"])]
     sections = read_sections(root, cfg)
     used_llm, llm_note = (False, "") if args.no_llm else llm_rank(shown, cfg, sections)
+    if not used_llm:
+        # No model: label relevance from keyword overlap so the sections still mean something.
+        profile = list_profile(cfg)
+        for cand in shown:
+            label_relevance(cand, cfg, profile)
     # Without a model (or when it declines) every entry still needs a home.
     fallback_section = cfg.get("default_section") or (sections[0] if sections else "")
     if fallback_section:
@@ -1002,11 +1356,22 @@ def main(argv=None) -> int:
             if not cand.section:
                 cand.section = fallback_section
 
+    record_sightings(state, shown, today)
+    if save_state(state_path, state):
+        log(f"state updated: {state_path}")
+
     meta = {"raw": len(collected), "unique": len(unique), "ranked": len(shown),
-            "today": today.isoformat(), "llm_note": llm_note}
+            "today": today.isoformat(), "llm_note": llm_note,
+            "ranking": "model" if used_llm else "lexical"}
     if llm_note and args.out:
         print(f"::warning::LLM ranking unavailable: {llm_note}")
     report, payload = render(shown, cfg, used_llm, meta)
+
+    if args.merge_into:
+        existing_path = Path(args.merge_into)
+        existing = existing_path.read_text(encoding="utf-8") if existing_path.exists() else ""
+        report = merge_issue_body(existing, report)
+        log(f"merged into existing issue body ({len(existing)} chars before)")
 
     document = {
         "version": VERSION,

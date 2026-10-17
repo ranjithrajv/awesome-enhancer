@@ -34,7 +34,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from research_digest import HEADING_RE, URL_RE, _match_section, dedupe_key  # noqa: E402
+from research_digest import (  # noqa: E402
+    HEADING_RE,
+    URL_RE,
+    _match_section,
+    dedupe_key,
+    load_state,
+    save_state,
+)
 
 PAYLOAD_RE = re.compile(r"<!--\s*digest-payload\s*(\{.*?\})\s*-->", re.S)
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*(.*)$")
@@ -57,19 +64,66 @@ def parse_payload(body: str) -> dict:
 
 
 def checked_urls(body: str) -> list:
-    """Return normalised URLs of every ticked task-list item, in order."""
-    urls: list = []
-    for line in (body or "").splitlines():
-        match = CHECKBOX_RE.match(line)
-        if not match:
+    """Ticked URLs everywhere except the 'Not interested' section."""
+    out: list = []
+    for section, urls in _checked_by_section(body).items():
+        if section.strip().lower().startswith("not interested"):
             continue
-        found = URL_RE.search(match.group(1))
+        for url in urls:
+            if url not in out:
+                out.append(url)
+    return out
+
+
+def rejected_urls(body: str) -> list:
+    """Ticked URLs under the 'Not interested' heading."""
+    out: list = []
+    for section, urls in _checked_by_section(body).items():
+        if not section.strip().lower().startswith("not interested"):
+            continue
+        for url in urls:
+            if url not in out:
+                out.append(url)
+    return out
+
+
+def _checked_by_section(body: str) -> dict:
+    """Ticked task-list URLs grouped by the heading they appear under."""
+    sections: dict = {}
+    current = ""
+    for line in (body or "").splitlines():
+        heading = HEADING_RE.match(line)
+        if heading:
+            current = heading.group(2).strip()
+            continue
+        box = CHECKBOX_RE.match(line)
+        if not box:
+            continue
+        found = URL_RE.search(box.group(1))
         if not found:
             continue
-        normalized = dedupe_key(found.group(0))
-        if normalized and normalized not in urls:
-            urls.append(normalized)
-    return urls
+        key = dedupe_key(found.group(0))
+        if not key:
+            continue
+        bucket = sections.setdefault(current, [])
+        if key not in bucket:
+            bucket.append(key)
+    return sections
+
+
+def update_state(path, accepted: list, rejected: list) -> bool:
+    """Record accepted/rejected URLs in the state file. Returns True if written."""
+    from datetime import date as _date  # local import keeps this module standalone
+
+    state = load_state(path)
+    today = _date.today().isoformat()
+    for status, urls in (("accepted", accepted), ("rejected", rejected)):
+        for url in urls:
+            entry = state.setdefault(dedupe_key(url), {})
+            entry.setdefault("first_seen", today)
+            entry["status"] = status
+            entry["last_seen"] = today
+    return save_state(path, state)
 
 
 def _url_in_text(text: str, url: str) -> bool:
@@ -200,6 +254,7 @@ def main(argv=None) -> int:
     parser.add_argument("--default-section", default="", help="Section for entries without one.")
     parser.add_argument("--apply", action="store_true", help="Write changes (default is dry-run).")
     parser.add_argument("--report", default="", help="Write a JSON change report here.")
+    parser.add_argument("--state", default="", help="State file to record accepted/rejected URLs in.")
     parser.add_argument("--github-output", action="store_true")
     args = parser.parse_args(argv)
 
@@ -208,15 +263,26 @@ def main(argv=None) -> int:
     targets = [Path(f) for f in (args.file or ["README.md"])]
     targets = [t if t.is_absolute() else root / t for t in targets]
 
+    accepted = checked_urls(body)
+    rejected = rejected_urls(body)
     reports = [apply_body_to_file(path, body, args.default_section, args.apply)
                for path in targets]
     changed = [r["file"] for r in reports if r["changed"]]
     entries = sum(r["entries"] for r in reports)
     skipped = [s for r in reports for s in r["skipped"]]
 
+    state_updated = False
+    if args.state:
+        state_path = Path(args.state)
+        if not state_path.is_absolute():
+            state_path = root / args.state
+        state_updated = update_state(state_path, accepted, rejected)
+
     summary = {
         "apply": bool(args.apply),
-        "checked": len(checked_urls(body)),
+        "checked": len(accepted),
+        "rejected": rejected,
+        "state_updated": state_updated,
         "changed": changed,
         "entries": entries,
         "skipped": skipped,
@@ -238,6 +304,8 @@ def main(argv=None) -> int:
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
             handle.write(f"changed={'true' if changed else 'false'}\n")
             handle.write(f"entries={entries}\n")
+            handle.write(f"state={'true' if state_updated else 'false'}\n")
+            handle.write(f"rejected={len(rejected)}\n")
 
     print(json.dumps({"changed": changed, "entries": entries, "checked": summary["checked"],
                       "skipped": skipped}, indent=2, ensure_ascii=False))
