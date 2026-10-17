@@ -86,9 +86,10 @@ DEFAULTS: dict = {
     "default_section": "",
     "readme_files": ["README.md"],
     # Sources whose candidates must mention one of `keywords` in their title or
-    # description. Query-based sources such as Hacker News are noisy without a
-    # model to judge relevance, so gate them by default.
-    "keyword_gate": ["Hacker News"],
+    # description. Free-text sources are noisy without a model to judge
+    # relevance, so gate them: Hacker News matches loosely in story text, and
+    # Mastodon/Bluesky timelines and searches return conversational posts.
+    "keyword_gate": ["Hacker News", "Bluesky", "Mastodon"],
     # Seconds to wait between requests to the same host (Reddit and Mastodon
     # answer 429 if hammered).
     "request_delay": 1.0,

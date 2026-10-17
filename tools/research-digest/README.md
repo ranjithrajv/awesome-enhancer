@@ -144,7 +144,7 @@ All keys are optional; defaults live in `research_digest.py:DEFAULTS`. See
 | `per_source_caps` | `{}` | Per-source override, e.g. `{"Reddit": 6}`. |
 | `source_weights` | `{}` | Per-source multiplier, e.g. `{"RSS": 0.8}`. |
 | `half_life_days` | `21` | Freshness decay half-life. |
-| `keyword_gate` | `["Hacker News"]` | Sources whose candidates must mention one of `keywords` in the title or description. |
+| `keyword_gate` | `["Hacker News", "Bluesky", "Mastodon"]` | Sources whose candidates must mention one of `keywords` in the title or description. Free-text sources are noisy without a relevance model. |
 | `request_delay` | `1.0` | Seconds between requests to Reddit and Mastodon, which answer 429 when hammered. |
 | `sections` | `[]` | Allowed sections; empty means auto-detect `##` headings from `README.md`. |
 | `default_section` | `""` | Fallback when the LLM cannot pick a section. |
