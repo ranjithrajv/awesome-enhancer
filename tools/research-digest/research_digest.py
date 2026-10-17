@@ -240,6 +240,15 @@ def _strip_html(text: str) -> str:
     return _clean(re.sub(r"<[^>]+>", " ", text or ""))
 
 
+def _xml_root(data: bytes):
+    """Parse XML, tolerating a BOM or whitespace before the declaration.
+
+    Some feeds (blog.datawrapper.de) emit a leading newline before ``<?xml``,
+    which the XML spec forbids and expat rejects.
+    """
+    return ET.fromstring(data.lstrip(b"\xef\xbb\xbf \t\r\n"))
+
+
 def _snippet(data, limit: int = 120) -> str:
     """First ``limit`` characters of a response body, for diagnostics."""
     if data is None:
@@ -399,7 +408,7 @@ def fetch_rss(cfg: dict, ctx: Context) -> list:
     keywords = [k for k in keywords if k]
     for feed in cfg["rss_feeds"]:
         try:
-            root = ET.fromstring(http_request(feed))
+            root = _xml_root(http_request(feed))
         except Exception as exc:  # noqa: BLE001 - a bad feed must not fail the run
             log(f"rss failed {feed}: {exc}")
             continue
@@ -466,7 +475,7 @@ def fetch_arxiv(cfg: dict, ctx: Context) -> list:
         url = ("http://export.arxiv.org/api/query?search_query="
                + quote_plus(query, safe=":+,()")
                + "&sortBy=submittedDate&sortOrder=descending&max_results=25")
-        root = ET.fromstring(http_request(url))
+        root = _xml_root(http_request(url))
         for entry in root.findall(ns + "entry"):
             link = _clean(entry.findtext(ns + "id") or "")
             published = (entry.findtext(ns + "published") or "")[:10]
@@ -517,7 +526,7 @@ def fetch_reddit(cfg: dict, ctx: Context) -> list:
     for sub in cfg["reddit_subreddits"]:
         url = f"https://www.reddit.com/r/{quote(sub)}/.rss"
         try:
-            root = ET.fromstring(http_request(url, headers={"Accept": "application/atom+xml"}))
+            root = _xml_root(http_request(url, headers={"Accept": "application/atom+xml"}))
         except Exception as exc:  # noqa: BLE001 - a blocked subreddit must not fail the run
             log(f"reddit feed failed {sub}: {exc}")
             continue

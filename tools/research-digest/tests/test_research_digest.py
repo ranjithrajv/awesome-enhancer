@@ -107,6 +107,19 @@ def test_fetch_rss_survives_a_broken_feed(monkeypatch):
     assert rd.fetch_rss(cfg, _ctx()) == []
 
 
+@pytest.mark.parametrize("prefix", [b"\n", b"\xef\xbb\xbf", b"  \r\n"])
+def test_fetch_rss_tolerates_junk_before_the_xml_declaration(monkeypatch, prefix):
+    payload = prefix + (
+        b'<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel>'
+        b"<item><title>BOINC update</title><link>https://example.org/x</link>"
+        b"<description>volunteer computing</description></item>"
+        b"</channel></rss>"
+    )
+    monkeypatch.setattr(rd, "http_request", lambda *a, **k: payload)
+    cfg = _config(keywords=["volunteer computing"], rss_feeds=["https://example.org/feed"])
+    assert [c.url for c in rd.fetch_rss(cfg, _ctx())] == ["https://example.org/x"]
+
+
 # --------------------------------------------------------------------------- #
 # De-duplication and ranking
 # --------------------------------------------------------------------------- #
